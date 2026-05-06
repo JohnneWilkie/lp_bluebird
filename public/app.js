@@ -173,7 +173,11 @@ function loadState() {
 }
 
 function scrollQuote() {
-  document.querySelector("#quote-form").scrollIntoView({ behavior: "smooth", block: "start" });
+  const section = document.querySelector("#quote-form");
+  if (!section) return;
+  const rect = section.getBoundingClientRect();
+  const targetTop = window.scrollY + rect.top - Math.max(80, (window.innerHeight - rect.height) * 0.28);
+  window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
 }
 
 function applyPreset(preset = {}, origin = "card") {
@@ -332,10 +336,7 @@ const steps = [
       </div>
     `, "Continue to Fence Details"),
     validate: () => requireField("firstName", "Please add your first name.") && requireField("phone", "Please add your phone number.") && requireEmail(),
-    onComplete: () => {
-      track("contact_info_submitted");
-      sendLead("contact_capture", true);
-    }
+    onComplete: () => track("contact_info_submitted")
   },
   {
     key: "project",
@@ -426,7 +427,7 @@ function optionStep(options, key, eventName, extra = "", nextLabel = "Continue",
       ${options.map((option) => `
         <button class="option" type="button" data-option-key="${key}" data-option-value="${option}" aria-pressed="${state[key] === option}">
           ${withImages ? `<img src="${imageMap[option] || imageMap.default}" alt="${option}" loading="lazy">` : ""}
-          ${withImages ? "" : `<b class="option-icon">${escapeHtml(option.slice(0, 2).toUpperCase())}</b>`}
+          ${withImages ? "" : `<b class="option-check">${state[key] === option ? "✓" : ""}</b>`}
           <span>${option}</span>
         </button>
       `).join("")}
@@ -438,6 +439,7 @@ function optionStep(options, key, eventName, extra = "", nextLabel = "Continue",
 
 function cityStep() {
   const listId = "citySuggestions";
+  const menuId = "cityMenu";
   const suggestions = [...new Set([
     ...(citySuggestions[state.serviceArea] || []),
     ...citySuggestions["Greater Boston Metro Area"],
@@ -447,17 +449,18 @@ function cityStep() {
   return fields(`
     <div class="field-grid">
       <label>City
-        <input id="city" value="${escapeHtml(state.city)}" list="${listId}" autocomplete="address-level2" placeholder="Start typing your city">
+        <input id="city" value="${escapeHtml(state.city)}" list="${listId}" autocomplete="address-level2" placeholder="Start typing your city" data-city-input="true">
       </label>
       <datalist id="${listId}">
         ${suggestions.map((city) => `<option value="${city}"></option>`).join("")}
       </datalist>
+      <div class="city-menu hidden" id="${menuId}" role="listbox" aria-label="City suggestions"></div>
     </div>
   `, "View My Quote Snapshot");
 }
 
 function backButton() {
-  return state.step > 0 ? `<button class="btn back-btn" type="button" data-back>Back</button>` : "";
+  return state.step > 0 && state.step < steps.length - 1 ? `<button class="btn back-btn" type="button" data-back>Back</button>` : "";
 }
 
 function snapshotStep() {
@@ -473,7 +476,7 @@ function snapshotStep() {
   const statusCopy = {
     idle: "Preparing your quote snapshot...",
     sending: "Preparing your quote snapshot...",
-    sent: "Your quote snapshot is saved. For the fastest next step, call now.",
+    sent: "Thanks, your quote request was received. Our team will contact you as quickly as possible. If you prefer immediate help, call us now.",
     error: "Your details are still saved here. Please call us if this screen does not update."
   }[state.finalStatus || "idle"];
 
@@ -486,8 +489,7 @@ function snapshotStep() {
       <div class="summary-box">${rows.map(([label, value]) => `<div class="summary-row"><span>${label}</span><span>${escapeHtml(value)}</span></div>`).join("")}</div>
       <p class="${state.finalStatus === "error" ? "error" : "microcopy"}">${statusCopy}</p>
       <div class="form-actions">
-        ${backButton()}
-        <a class="btn btn-primary" href="tel:${PHONE}" data-track="phone_click">Call Now</a>
+        <a class="btn btn-primary snapshot-call" href="tel:${PHONE}" data-track="phone_click">Call Now</a>
       </div>
     </div>
   `;
@@ -496,8 +498,9 @@ function snapshotStep() {
 function renderForm(error = "") {
   const current = steps[state.step];
   const title = typeof current.title === "function" ? current.title() : current.title;
-  document.getElementById("progressText").textContent = `Step ${state.step + 1} of ${steps.length}`;
-  document.getElementById("progressBar").style.width = `${((state.step + 1) / steps.length) * 100}%`;
+  const fakeProgress = [18, 62, 74, 86, 94, 100];
+  document.getElementById("progressText").textContent = "";
+  document.getElementById("progressBar").style.width = `${fakeProgress[state.step] || 100}%`;
   document.getElementById("formSteps").innerHTML = `
     <div class="form-step">
       <h2>${title}</h2>
@@ -531,6 +534,7 @@ function bindFormEvents() {
     state.finalStatus = "idle";
     saveState();
   }));
+  bindCityMenu();
   document.querySelector("[data-next]")?.addEventListener("click", nextStep);
   document.querySelector("[data-back]")?.addEventListener("click", () => {
     syncInputs();
@@ -540,6 +544,49 @@ function bindFormEvents() {
     renderForm();
   });
   bindGlobalTracking();
+}
+
+function bindCityMenu() {
+  const input = document.getElementById("city");
+  const menu = document.getElementById("cityMenu");
+  if (!input || !menu) return;
+
+  const allSuggestions = [...new Set([
+    ...(citySuggestions[state.serviceArea] || []),
+    ...citySuggestions["Greater Boston Metro Area"],
+    ...citySuggestions["Southern New Hampshire"]
+  ])].sort();
+
+  const render = (value) => {
+    const term = String(value || "").trim().toLowerCase();
+    if (!term) {
+      menu.classList.add("hidden");
+      menu.innerHTML = "";
+      return;
+    }
+    const matches = allSuggestions.filter((city) => city.toLowerCase().includes(term)).slice(0, 8);
+    if (!matches.length) {
+      menu.classList.add("hidden");
+      menu.innerHTML = "";
+      return;
+    }
+    menu.innerHTML = matches.map((city) => `<button type="button" class="city-menu-item" data-city-value="${escapeHtml(city)}">${escapeHtml(city)}</button>`).join("");
+    menu.classList.remove("hidden");
+    menu.querySelectorAll("[data-city-value]").forEach((node) => {
+      node.addEventListener("click", () => {
+        input.value = node.dataset.cityValue || "";
+        state.city = input.value.trim();
+        menu.classList.add("hidden");
+        saveState();
+      });
+    });
+  };
+
+  input.addEventListener("focus", () => render(input.value));
+  input.addEventListener("input", () => render(input.value));
+  input.addEventListener("blur", () => {
+    setTimeout(() => menu.classList.add("hidden"), 120);
+  });
 }
 
 function syncInputs() {
@@ -620,12 +667,7 @@ function buildPayload(stage) {
 
 async function sendLead(stage, silent) {
   syncInputs();
-
-  if (stage === "contact_capture") {
-    state.recaptchaToken = await getCaptchaToken("contact_capture");
-  }
-
-  const cacheKey = stage === "contact_capture" ? PARTIAL_SENT_KEY : FINAL_SENT_KEY;
+  const cacheKey = FINAL_SENT_KEY;
   const fingerprint = JSON.stringify(buildPayload(stage));
   if (sessionStorage.getItem(cacheKey) === fingerprint) return true;
   if (stage === "quote_complete") {
