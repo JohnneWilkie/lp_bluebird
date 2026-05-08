@@ -62,7 +62,7 @@
     ];
 
     function payload(stage) {
-      return {
+      const leadPayload = {
         stage,
         source: "BlueBird Fence Main LP",
         leadType: stage === "contact_capture" ? "Partial Fence Quote Contact" : "Fence Quote Request",
@@ -90,19 +90,26 @@
         website: "",
         recaptchaToken: stage === "contact_capture" ? state.recaptchaToken : ""
       };
+      return window.BlueBirdMeta?.enrichPayload
+        ? window.BlueBirdMeta.enrichPayload(leadPayload, stage === "contact_capture" ? "Lead" : "LeadComplete")
+        : leadPayload;
     }
 
     async function sendLead(stage) {
       if (stage === "contact_capture") {
         state.recaptchaToken = await getCaptchaToken();
       }
+      const body = payload(stage);
       const response = await fetch("/api/quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload(stage))
+        body: JSON.stringify(body)
       });
       const data = await response.json().catch(() => ({}));
-      return Boolean(response.ok && data.ok);
+      const ok = Boolean(response.ok && data.ok);
+      if (ok && stage === "contact_capture") window.BlueBirdMeta?.trackLead(body);
+      if (ok && stage === "quote_complete") window.BlueBirdMeta?.trackLeadComplete(body);
+      return ok;
     }
 
     function render() {

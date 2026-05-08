@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import crypto from "node:crypto";
 import express from "express";
 import { z } from "zod";
 
@@ -26,6 +27,9 @@ loadEnvFile(path.join(__dirname, ".env"));
 const PORT = Number(process.env.PORT || 8091);
 const WEBHOOK_URL = String(process.env.N8N_BLUEBIRD_QUOTE_WEBHOOK_URL || "").trim();
 const RECAPTCHA_SECRET = String(process.env.BLUEBIRD_RECAPTCHA_SECRET_KEY || process.env.RECAPTCHA_SECRET_KEY || "").trim();
+const META_PIXEL_ID = String(process.env.META_PIXEL_ID || "1285141176620318").trim();
+const META_CAPI_ACCESS_TOKEN = String(process.env.META_CAPI_ACCESS_TOKEN || "").trim();
+const META_TEST_EVENT_CODE = String(process.env.META_TEST_EVENT_CODE || "").trim();
 const MAX_BODY_BYTES = "32kb";
 const rateBuckets = new Map();
 
@@ -55,6 +59,9 @@ const quoteSchema = z.object({
   gclid: z.string().optional(),
   timestamp: z.string().optional(),
   recaptchaToken: z.string().optional(),
+  metaEventId: z.string().optional(),
+  fbp: z.string().optional(),
+  fbc: z.string().optional(),
   website: z.string().optional()
 }).superRefine((data, ctx) => {
   const stage = data.stage || "quote_complete";
@@ -160,6 +167,87 @@ function normalizePhone(value) {
   return raw;
 }
 
+function sha256(value) {
+  const normalized = clean(value).toLowerCase();
+  if (!normalized) return undefined;
+  return crypto.createHash("sha256").update(normalized).digest("hex");
+}
+
+function normalizePhoneDigits(value) {
+  const digits = clean(value).replace(/\D/g, "");
+  if (digits.length === 10) return `1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return digits;
+  return digits;
+}
+
+function metaEventTime(value) {
+  const parsed = Date.parse(clean(value));
+  return Math.floor((Number.isFinite(parsed) ? parsed : Date.now()) / 1000);
+}
+
+function metaEventSourceUrl(req, pagePath) {
+  const proto = clean(req.headers["x-forwarded-proto"]) || req.protocol || "https";
+  const host = clean(req.headers["x-forwarded-host"]) || clean(req.headers.host);
+  const pathValue = clean(pagePath) || "/";
+  if (!host) return pathValue;
+  return `${proto}://${host}${pathValue.startsWith("/") ? pathValue : `/${pathValue}`}`;
+}
+
+function metaUserData(req, payload = {}) {
+  const phoneDigits = normalizePhoneDigits(payload.phone);
+  const userData = {
+    client_ip_address: clientIp(req),
+    client_user_agent: clean(req.headers["user-agent"]),
+    fbp: clean(payload.fbp),
+    fbc: clean(payload.fbc),
+    em: sha256(payload.email),
+    ph: phoneDigits ? sha256(phoneDigits) : undefined,
+    fn: sha256(payload.firstName)
+  };
+  return Object.fromEntries(Object.entries(userData).filter(([, value]) => value));
+}
+
+async function sendMetaCapiEvent(req, eventName, payload = {}, eventId = "") {
+  if (!META_CAPI_ACCESS_TOKEN || !META_PIXEL_ID) return;
+  const event = {
+    event_name: eventName,
+    event_time: metaEventTime(payload.timestamp),
+    event_id: clean(eventId) || clean(payload.metaEventId) || crypto.randomUUID(),
+    action_source: "website",
+    event_source_url: metaEventSourceUrl(req, payload.pagePath),
+    user_data: metaUserData(req, payload),
+    custom_data: {
+      content_name: clean(payload.contentName) || clean(payload.leadType) || eventName,
+      page_path: clean(payload.pagePath),
+      service_area: clean(payload.serviceArea),
+      project_type: clean(payload.projectType),
+      fence_style: clean(payload.fenceStyle),
+      city: clean(payload.city),
+      landing_page: clean(payload.landingPage)
+    }
+  };
+  Object.keys(event.custom_data).forEach((key) => {
+    if (!event.custom_data[key]) delete event.custom_data[key];
+  });
+
+  const body = { data: [event] };
+  if (META_TEST_EVENT_CODE) body.test_event_code = META_TEST_EVENT_CODE;
+
+  try {
+    const response = await fetch(`https://graph.facebook.com/v21.0/${META_PIXEL_ID}/events?access_token=${encodeURIComponent(META_CAPI_ACCESS_TOKEN)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      console.error("[meta-capi] event error", response.status, text);
+    }
+  } catch (error) {
+    console.error("[meta-capi] failed to send event", error);
+  }
+}
+
 function isoTimestamp(value) {
   const parsed = Date.parse(clean(value));
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : new Date().toISOString();
@@ -218,9 +306,32 @@ function normalizePayload(input) {
     utmTerm: clean(input.utmTerm),
     utmContent: clean(input.utmContent),
     gclid: clean(input.gclid),
-    timestamp: isoTimestamp(input.timestamp)
+    timestamp: isoTimestamp(input.timestamp),
+    metaEventId: clean(input.metaEventId),
+    fbp: clean(input.fbp),
+    fbc: clean(input.fbc)
   };
 }
+
+app.post("/api/meta-event", async (req, res) => {
+  if (!req.is("application/json")) {
+    return res.status(415).json({ ok: false });
+  }
+  const eventName = clean(req.body?.eventName);
+  const allowedEvents = new Set(["PageView", "ViewContent", "clique_chamada"]);
+  if (!allowedEvents.has(eventName)) {
+    return res.status(400).json({ ok: false });
+  }
+  const payload = {
+    contentName: clean(req.body?.contentName),
+    pagePath: clean(req.body?.pagePath) || "/",
+    timestamp: clean(req.body?.timestamp) || new Date().toISOString(),
+    fbp: clean(req.body?.fbp),
+    fbc: clean(req.body?.fbc)
+  };
+  await sendMetaCapiEvent(req, eventName, payload, clean(req.body?.eventId));
+  return res.json({ ok: true });
+});
 
 app.post("/api/quote", rateLimit, async (req, res) => {
   if (!req.is("application/json")) {
@@ -265,6 +376,9 @@ app.post("/api/quote", rateLimit, async (req, res) => {
       console.error("[quote-api] n8n webhook error", response.status, response.statusText);
       return res.status(502).json({ ok: false, message: "Unable to send quote request right now." });
     }
+
+    const metaEventName = stage === "contact_capture" ? "Lead" : "LeadComplete";
+    await sendMetaCapiEvent(req, metaEventName, payload, payload.metaEventId);
 
     return res.json({ ok: true, message: "Quote request sent successfully." });
   } catch (error) {

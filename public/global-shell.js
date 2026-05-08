@@ -31,7 +31,7 @@
           </div>
           <div class="footer-contact">
             <h3>Contact</h3>
-            <a href="tel:${data.PHONE_RAW}">${data.PHONE_PRETTY}</a>
+            <a href="tel:${data.PHONE_RAW}" data-phone-link>${data.PHONE_PRETTY}</a>
             <a href="mailto:${data.EMAIL}">${data.EMAIL}</a>
             <p>${data.ADDRESS}</p>
           </div>
@@ -192,7 +192,7 @@
           </div>
           <div class="hero-actions">
             <a class="btn btn-primary2" href="#quote-form">Check Financing Options</a>
-            <a class="btn btn-secondary" href="tel:${data.PHONE_RAW}">Call For Financing Help</a>
+            <a class="btn btn-secondary" href="tel:${data.PHONE_RAW}" data-phone-link>Call For Financing Help</a>
           </div>
         </div>
       </section>

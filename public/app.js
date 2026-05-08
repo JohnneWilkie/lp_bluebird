@@ -511,7 +511,7 @@ function snapshotStep() {
       <div class="summary-box">${rows.map(([label, value]) => `<div class="summary-row"><span>${label}</span><span>${escapeHtml(value)}</span></div>`).join("")}</div>
       <p class="${state.finalStatus === "error" ? "error" : "microcopy"}">${statusCopy}</p>
       <div class="form-actions">
-        <a class="btn btn-primary snapshot-call" href="tel:${PHONE}" data-track="phone_click">Call Now</a>
+        <a class="btn btn-primary snapshot-call" href="tel:${PHONE}" data-phone-link data-track="phone_click">Call Now</a>
       </div>
     </div>
   `;
@@ -662,7 +662,7 @@ function updateFormImage() {
 }
 
 function buildPayload(stage) {
-  return {
+  const payload = {
     stage,
     source: "BlueBird Fence Main LP",
     leadType: stage === "contact_capture" ? "Partial Fence Quote Contact" : "Fence Quote Request",
@@ -685,6 +685,9 @@ function buildPayload(stage) {
     website: state.website,
     recaptchaToken: stage === "contact_capture" ? state.recaptchaToken : ""
   };
+  return window.BlueBirdMeta?.enrichPayload
+    ? window.BlueBirdMeta.enrichPayload(payload, stage === "contact_capture" ? "Lead" : "LeadComplete")
+    : payload;
 }
 
 async function sendLead(stage, silent) {
@@ -694,7 +697,8 @@ async function sendLead(stage, silent) {
     saveState();
   }
   const cacheKey = stage === "contact_capture" ? PARTIAL_SENT_KEY : FINAL_SENT_KEY;
-  const fingerprint = JSON.stringify(buildPayload(stage));
+  const payload = buildPayload(stage);
+  const fingerprint = JSON.stringify(payload);
   if (sessionStorage.getItem(cacheKey) === fingerprint) return true;
   if (stage === "quote_complete") {
     state.finalStatus = "sending";
@@ -713,9 +717,11 @@ async function sendLead(stage, silent) {
     if (stage === "quote_complete") {
       state.finalStatus = "sent";
       saveState();
+      window.BlueBirdMeta?.trackLeadComplete(payload);
       track("quote_submit", { serviceArea: state.serviceArea, projectType: state.projectType, fenceStyle: state.fenceStyle });
       renderForm();
     } else {
+      window.BlueBirdMeta?.trackLead(payload);
       track("contact_capture_submit", { serviceArea: state.serviceArea });
     }
     return true;
