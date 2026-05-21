@@ -61,6 +61,12 @@
       { key: "review", title: "Review and submit" }
     ];
 
+    function inferProjectState() {
+      if (state.serviceArea === "Southern New Hampshire") return "nh";
+      if (state.serviceArea === "Greater Boston Metro Area") return "ma";
+      return "";
+    }
+
     function payload(stage) {
       const leadPayload = {
         stage,
@@ -77,6 +83,8 @@
         city: state.city,
         zipCodeProject: "",
         fullAddress: "",
+        state: inferProjectState(),
+        country: "us",
         timeline: "",
         pagePath: window.location.pathname,
         landingPage: "Main Quote Landing Page",

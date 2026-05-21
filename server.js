@@ -30,7 +30,9 @@ const RECAPTCHA_SECRET = String(process.env.BLUEBIRD_RECAPTCHA_SECRET_KEY || pro
 const META_PIXEL_ID = String(process.env.META_PIXEL_ID || "1285141176620318").trim();
 const META_CAPI_ACCESS_TOKEN = String(process.env.META_CAPI_ACCESS_TOKEN || "").trim();
 const META_TEST_EVENT_CODE = String(process.env.META_TEST_EVENT_CODE || "").trim();
+const GTM_CONTAINER_ID = String(process.env.GTM_CONTAINER_ID || "GTM-PJZHCFKS").trim();
 const MAX_BODY_BYTES = "32kb";
+const PUBLIC_ROOT = path.join(__dirname, "public");
 const rateBuckets = new Map();
 
 const quoteSchema = z.object({
@@ -40,6 +42,7 @@ const quoteSchema = z.object({
   serviceArea: z.string().trim().min(1),
   zipCodeInitial: z.string().optional(),
   firstName: z.string().trim().min(1),
+  lastName: z.string().optional(),
   phone: z.string().trim().min(7),
   email: z.string().trim().email().optional().or(z.literal("")),
   projectType: z.string().optional(),
@@ -48,6 +51,8 @@ const quoteSchema = z.object({
   city: z.string().optional(),
   zipCodeProject: z.string().optional(),
   fullAddress: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().optional(),
   timeline: z.string().optional(),
   pagePath: z.string().optional(),
   landingPage: z.string().optional(),
@@ -60,6 +65,7 @@ const quoteSchema = z.object({
   timestamp: z.string().optional(),
   recaptchaToken: z.string().optional(),
   metaEventId: z.string().optional(),
+  externalId: z.string().optional(),
   fbp: z.string().optional(),
   fbc: z.string().optional(),
   website: z.string().optional()
@@ -104,11 +110,81 @@ const quoteSchema = z.object({
 
 const app = express();
 
+function googleTagManagerHead() {
+  if (!GTM_CONTAINER_ID) return "";
+  return `    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','${GTM_CONTAINER_ID}');</script>
+    <!-- End Google Tag Manager -->
+`;
+}
+
+function googleTagManagerBody() {
+  if (!GTM_CONTAINER_ID) return "";
+  return `  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${GTM_CONTAINER_ID}"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+`;
+}
+
+function injectGoogleTagManager(html) {
+  let output = String(html || "");
+  if (!GTM_CONTAINER_ID) return output;
+  const hasHeadSnippet = output.includes(GTM_CONTAINER_ID) && output.includes("googletagmanager.com/gtm.js");
+  if (!hasHeadSnippet) {
+    output = output.replace(/<\/head>/i, `${googleTagManagerHead()}</head>`);
+  }
+  if (!output.includes(`googletagmanager.com/ns.html?id=${GTM_CONTAINER_ID}`)) {
+    output = output.replace(/<body([^>]*)>/i, `<body$1>\n${googleTagManagerBody()}`);
+  }
+  return output;
+}
+
+function publicHtmlPath(requestPath) {
+  let pathname = "/";
+  try {
+    pathname = decodeURIComponent(String(requestPath || "/").split("?")[0]);
+  } catch {
+    return "";
+  }
+  const requested = pathname === "/" ? "/index.html" : pathname;
+  const candidates = path.extname(requested) ? [requested] : [`${requested}.html`, path.join(requested, "index.html")];
+
+  for (const candidate of candidates) {
+    const fullPath = path.resolve(PUBLIC_ROOT, `.${candidate.startsWith("/") ? candidate : `/${candidate}`}`);
+    if (!fullPath.startsWith(`${PUBLIC_ROOT}${path.sep}`) || path.extname(fullPath) !== ".html") continue;
+    if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) return fullPath;
+  }
+  return "";
+}
+
+function sendHtmlWithGlobalTags(res, filePath) {
+  const html = fs.readFileSync(filePath, "utf8");
+  res.type("html");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  return res.send(injectGoogleTagManager(html));
+}
+
 app.use(express.json({
   limit: MAX_BODY_BYTES,
   type: ["application/json", "application/*+json"]
 }));
-app.use(express.static(path.join(__dirname, "public"), {
+app.use((req, res, next) => {
+  if (!["GET", "HEAD"].includes(req.method) || req.path.startsWith("/api/")) return next();
+  const filePath = publicHtmlPath(req.path);
+  if (!filePath) return next();
+  if (req.method === "HEAD") {
+    res.type("html");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    return res.end();
+  }
+  return sendHtmlWithGlobalTags(res, filePath);
+});
+app.use(express.static(PUBLIC_ROOT, {
   extensions: ["html"],
   maxAge: "1h"
 }));
@@ -167,10 +243,26 @@ function normalizePhone(value) {
   return raw;
 }
 
-function sha256(value) {
-  const normalized = clean(value).toLowerCase();
+function sha256(value, normalize = (input) => clean(input).toLowerCase()) {
+  const normalized = normalize(value);
   if (!normalized) return undefined;
   return crypto.createHash("sha256").update(normalized).digest("hex");
+}
+
+function normalizeCityForHash(value) {
+  return clean(value).toLowerCase().replace(/\s+/g, "");
+}
+
+function normalizeStateForHash(value) {
+  return clean(value).toLowerCase().replace(/[^a-z]/g, "").slice(0, 2);
+}
+
+function normalizeZipForHash(value) {
+  return clean(value).toLowerCase().replace(/\s+/g, "");
+}
+
+function normalizeCountryForHash(value) {
+  return clean(value || "us").toLowerCase().replace(/[^a-z]/g, "").slice(0, 2);
 }
 
 function normalizePhoneDigits(value) {
@@ -195,14 +287,21 @@ function metaEventSourceUrl(req, pagePath) {
 
 function metaUserData(req, payload = {}) {
   const phoneDigits = normalizePhoneDigits(payload.phone);
+  const zip = clean(payload.zipCodeProject) || clean(payload.zipCodeInitial);
   const userData = {
     client_ip_address: clientIp(req),
     client_user_agent: clean(req.headers["user-agent"]),
     fbp: clean(payload.fbp),
     fbc: clean(payload.fbc),
+    external_id: sha256(payload.externalId),
     em: sha256(payload.email),
     ph: phoneDigits ? sha256(phoneDigits) : undefined,
-    fn: sha256(payload.firstName)
+    fn: sha256(payload.firstName),
+    ln: sha256(payload.lastName),
+    ct: sha256(payload.city, normalizeCityForHash),
+    st: sha256(payload.state, normalizeStateForHash),
+    zp: sha256(zip, normalizeZipForHash),
+    country: sha256(payload.country || "us", normalizeCountryForHash)
   };
   return Object.fromEntries(Object.entries(userData).filter(([, value]) => value));
 }
@@ -223,6 +322,8 @@ async function sendMetaCapiEvent(req, eventName, payload = {}, eventId = "") {
       project_type: clean(payload.projectType),
       fence_style: clean(payload.fenceStyle),
       city: clean(payload.city),
+      state: clean(payload.state),
+      country: clean(payload.country) || "us",
       landing_page: clean(payload.landingPage)
     }
   };
@@ -289,6 +390,7 @@ function normalizePayload(input) {
     serviceArea: clean(input.serviceArea),
     zipCodeInitial: clean(input.zipCodeInitial),
     firstName: clean(input.firstName),
+    lastName: clean(input.lastName),
     phone: normalizePhone(input.phone),
     email: clean(input.email),
     projectType: clean(input.projectType),
@@ -297,6 +399,8 @@ function normalizePayload(input) {
     city: clean(input.city),
     zipCodeProject: clean(input.zipCodeProject),
     fullAddress: clean(input.fullAddress),
+    state: clean(input.state),
+    country: clean(input.country) || "us",
     timeline: clean(input.timeline),
     pagePath: clean(input.pagePath) || "/",
     landingPage: clean(input.landingPage) || "Main Quote Landing Page",
@@ -308,6 +412,7 @@ function normalizePayload(input) {
     gclid: clean(input.gclid),
     timestamp: isoTimestamp(input.timestamp),
     metaEventId: clean(input.metaEventId),
+    externalId: clean(input.externalId),
     fbp: clean(input.fbp),
     fbc: clean(input.fbc)
   };
@@ -326,6 +431,16 @@ app.post("/api/meta-event", async (req, res) => {
     contentName: clean(req.body?.contentName),
     pagePath: clean(req.body?.pagePath) || "/",
     timestamp: clean(req.body?.timestamp) || new Date().toISOString(),
+    firstName: clean(req.body?.firstName),
+    lastName: clean(req.body?.lastName),
+    phone: normalizePhone(req.body?.phone),
+    email: clean(req.body?.email),
+    city: clean(req.body?.city),
+    state: clean(req.body?.state),
+    country: clean(req.body?.country) || "us",
+    zipCodeProject: clean(req.body?.zipCodeProject),
+    zipCodeInitial: clean(req.body?.zipCodeInitial),
+    externalId: clean(req.body?.externalId),
     fbp: clean(req.body?.fbp),
     fbc: clean(req.body?.fbc)
   };
@@ -396,7 +511,7 @@ app.use("/api", (_req, res) => {
 });
 
 app.get("*", (_req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  sendHtmlWithGlobalTags(res, path.join(PUBLIC_ROOT, "index.html"));
 });
 
 app.listen(PORT, () => {

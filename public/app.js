@@ -176,6 +176,12 @@ function getTracking() {
   return captured;
 }
 
+function inferProjectState() {
+  if (state.serviceArea === "Southern New Hampshire") return "nh";
+  if (state.serviceArea === "Greater Boston Metro Area") return "ma";
+  return "";
+}
+
 function saveState() {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
@@ -677,6 +683,8 @@ function buildPayload(stage) {
     city: state.city,
     zipCodeProject: "",
     fullAddress: "",
+    state: inferProjectState(),
+    country: "us",
     timeline: "",
     pagePath: window.location.pathname,
     landingPage: "Main Quote Landing Page",
