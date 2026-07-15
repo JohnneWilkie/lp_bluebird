@@ -19,63 +19,6 @@ body { margin: 0; color: var(--ink); background: var(--white); }
 button, input { font: inherit; }
 a { color: inherit; text-decoration: none; }
 img { display: block; max-width: 100%; height: auto; }
-.summer-special-bar {
-  position: relative;
-  z-index: 25;
-  color: var(--white);
-  background: linear-gradient(90deg, #07347d 0%, #1463d8 52%, #061c3a 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, .18);
-  box-shadow: 0 12px 30px rgba(7, 29, 58, .16);
-}
-.summer-special-inner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  width: min(100%, 1180px);
-  min-height: 58px;
-  margin: 0 auto;
-  padding: 10px clamp(14px, 4vw, 56px);
-  text-align: center;
-}
-.summer-special-kicker {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  color: #071d3a;
-  background: #ffd43b;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.summer-special-inner strong {
-  color: var(--white);
-  font-size: clamp(16px, 2.2vw, 22px);
-  line-height: 1.14;
-}
-.summer-special-inner a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  color: #071d3a;
-  background: var(--white);
-  font-size: 13px;
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, .12);
-}
-.summer-special-inner a:hover {
-  color: #071d3a;
-  background: #f2f8ff;
-}
 .site-header {
   position: relative;
   top: 0;
@@ -1096,25 +1039,6 @@ details p { color: var(--muted); line-height: 1.55; }
   .footer-wrap { grid-template-columns: 1.2fr 1fr; align-items: start; padding-bottom: 42px; }
 }
 @media (max-width: 760px) {
-  .summer-special-inner {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    justify-content: stretch;
-    gap: 8px 10px;
-    min-height: 74px;
-    text-align: left;
-  }
-  .summer-special-kicker {
-    grid-column: 1 / -1;
-    justify-self: start;
-    font-size: 11px;
-  }
-  .summer-special-inner strong { font-size: 16px; }
-  .summer-special-inner a {
-    min-height: 38px;
-    padding-inline: 10px;
-    font-size: 12px;
-  }
   .hero-proof-row {
     grid-template-columns: minmax(0, 1fr) minmax(102px, .66fr);
   }
