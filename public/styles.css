@@ -188,6 +188,133 @@ h3 { margin: 0 0 8px; color: var(--navy); font-size: 20px; }
 }
 .hero-badge strong { color: var(--navy); }
 .hero-badge span { color: var(--muted); font-size: 14px; }
+.campaign-august-special {
+  --august-gold: #ffbf2f;
+  --august-blue: #155d92;
+}
+.campaign-august-special .site-header {
+  border-bottom-color: rgba(255, 191, 47, .35);
+}
+.august-special-hero {
+  min-height: 720px;
+  background:
+    linear-gradient(90deg, rgba(6, 25, 48, .96) 0%, rgba(7, 45, 79, .84) 52%, rgba(7, 45, 79, .46) 100%),
+    url("https://le-cdn.hibuwebsites.com/c54ff2a15bce45ef8d5a73b0e7586ff7/dms3rep/multi/opt/bluebird-fence-why-choose-996w.jpg") center / cover no-repeat;
+}
+.august-special-hero .hero-overlay {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 191, 47, .22), transparent 32%),
+    linear-gradient(90deg, rgba(5, 18, 36, .96) 0%, rgba(7, 39, 67, .82) 52%, rgba(7, 39, 67, .48) 100%),
+    linear-gradient(180deg, rgba(7, 29, 58, .14), rgba(5, 18, 36, .88));
+}
+.august-special-hero .hero-copy {
+  max-width: 820px;
+}
+.august-offer-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin: 0 0 16px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 205, 92, .45);
+  border-radius: 999px;
+  color: #1c1200;
+  background: linear-gradient(180deg, #ffcf59 0%, #ffb600 100%);
+  box-shadow: 0 0 0 4px rgba(255, 182, 0, .16), 0 10px 24px rgba(0, 0, 0, .18);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.august-offer-card {
+  position: relative;
+  display: inline-grid;
+  gap: 3px;
+  margin: 18px 0 16px;
+  padding: 14px 24px 14px 20px;
+  border: 2px solid var(--august-gold);
+  border-radius: 14px 26px 26px 14px;
+  color: #06203f;
+  background: linear-gradient(135deg, #fff5d8 0%, #ffd77a 100%);
+  box-shadow: 0 0 0 4px rgba(255, 191, 47, .14), 0 12px 24px rgba(0, 0, 0, .18);
+}
+.august-offer-card::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -12px;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border: 2px solid var(--august-gold);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .72), 0 0 0 6px rgba(255, 191, 47, .12);
+}
+.august-offer-card span {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+}
+.august-offer-card strong {
+  color: #072c49;
+  font-size: clamp(28px, 4.2vw, 42px);
+  font-weight: 900;
+  line-height: .98;
+}
+.campaign-august-special .hero-subtitle {
+  max-width: 680px;
+  color: #eef8ff;
+  font-size: clamp(19px, 3.2vw, 28px);
+  line-height: 1.28;
+}
+.campaign-august-special .hero-actions {
+  margin-bottom: 18px;
+}
+.august-brand-proof {
+  max-width: 620px;
+  margin: 0 0 14px;
+  color: #fff;
+  font-size: clamp(18px, 2.7vw, 28px);
+  font-weight: 900;
+  line-height: 1.16;
+  text-shadow: 0 12px 28px rgba(0, 0, 0, .24);
+}
+.campaign-august-special .hero .btn-primary,
+.campaign-august-special .btn-primary2,
+.campaign-august-special .quote-step-primary {
+  background: linear-gradient(180deg, #4ea6e0 0%, #1f6fa8 48%, #155d92 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 0 0 4px rgba(47, 131, 187, .14), 0 12px 22px rgba(2, 22, 44, .28);
+}
+.campaign-august-special .hero .btn-primary:hover,
+.campaign-august-special .btn-primary2:hover,
+.campaign-august-special .quote-step-primary:hover {
+  background: linear-gradient(180deg, #3f98d3 0%, #1c659c 48%, #12527f 100%);
+}
+.august-disclaimer {
+  max-width: 720px;
+  margin: 14px 0 0;
+  color: #cfe3f1;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.august-disclaimer.dark {
+  color: rgba(7, 29, 58, .72);
+}
+.august-financing-card {
+  border: 1px solid rgba(255, 191, 47, .45);
+  background:
+    linear-gradient(135deg, rgba(255, 246, 220, .96), rgba(234, 245, 255, .98)),
+    var(--white);
+  box-shadow: 0 20px 50px rgba(7, 29, 58, .12);
+}
+.campaign-august-special .quote-header-band {
+  background: linear-gradient(90deg, #07347d, #155d92);
+}
+.campaign-august-special .quote-header-band span::before {
+  background: var(--august-gold);
+}
 .photo-strip {
   position: relative;
   display: grid;
@@ -1039,6 +1166,27 @@ details p { color: var(--muted); line-height: 1.55; }
   .footer-wrap { grid-template-columns: 1.2fr 1fr; align-items: start; padding-bottom: 42px; }
 }
 @media (max-width: 760px) {
+  .august-special-hero {
+    min-height: 760px;
+    padding-top: 28px;
+  }
+  .august-offer-badge {
+    min-height: 32px;
+    font-size: 11px;
+  }
+  .august-offer-card {
+    max-width: calc(100% - 12px);
+    padding: 12px 18px 12px 14px;
+  }
+  .august-offer-card strong {
+    font-size: 27px;
+  }
+  .campaign-august-special .hero-subtitle {
+    font-size: 18px;
+  }
+  .campaign-august-special .hero-actions {
+    align-items: stretch;
+  }
   .hero-proof-row {
     grid-template-columns: minmax(0, 1fr) minmax(102px, .66fr);
   }
