@@ -1382,9 +1382,12 @@ details p { color: var(--muted); line-height: 1.55; }
 .campaign-august-special .financing-calculator-section .brand-logo {
   width: 176px;
   height: auto;
+  min-height: 0;
+  max-height: 86px;
   padding: 10px 12px;
   border-radius: 8px;
   background: #fff;
+  object-fit: contain;
 }
 .campaign-august-special .financing-calculator-section .address-field {
   position: relative;

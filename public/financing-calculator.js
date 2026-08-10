@@ -1,3 +1,4 @@
+(() => {
 const GEOAPIFY_API_KEY = "d5bb983df17a4e15aebf7c4906e6e005";
 const RECAPTCHA_SITE_KEY = "6LfkjNwsAAAAAILZSKi0z4qi0GSeUkGG-hkcZaPJ";
 const TRACKING_KEY = "bluebird_tracking";
@@ -693,3 +694,4 @@ document.getElementById("quoteForm").addEventListener("submit", (event) => {
 
 loadState();
 render();
+})();
