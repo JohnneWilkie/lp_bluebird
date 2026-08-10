@@ -1393,6 +1393,11 @@ details p { color: var(--muted); line-height: 1.55; }
 .campaign-august-special .financing-calculator-section .address-field {
   position: relative;
 }
+.campaign-august-special .financing-calculator-section .address-field input::placeholder {
+  color: #8795a8;
+  font-weight: 400;
+  opacity: 1;
+}
 .campaign-august-special .financing-calculator-section .address-field small,
 .campaign-august-special .financing-calculator-section .toggle-row small {
   color: var(--muted);

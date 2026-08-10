@@ -247,19 +247,19 @@ function contactStep() {
       <div class="field-grid">
         <label>
           <span class="field-label">First Name</span>
-          <input id="firstName" value="${escapeHtml(state.firstName)}" autocomplete="given-name" placeholder="Emily" required>
+          <input id="firstName" value="${escapeHtml(state.firstName)}" autocomplete="given-name" required>
         </label>
         <label>
           <span class="field-label">Last Name</span>
-          <input id="lastName" value="${escapeHtml(state.lastName)}" autocomplete="family-name" placeholder="Johnson" required>
+          <input id="lastName" value="${escapeHtml(state.lastName)}" autocomplete="family-name" required>
         </label>
         <label>
           <span class="field-label">Phone Number</span>
-          <input id="phone" value="${escapeHtml(formatUSPhone(state.phone))}" inputmode="tel" autocomplete="tel" placeholder="(617) 555-0142" required>
+          <input id="phone" value="${escapeHtml(formatUSPhone(state.phone))}" inputmode="tel" autocomplete="tel" required>
         </label>
         <label>
           <span class="field-label">Email Address</span>
-          <input id="email" value="${escapeHtml(state.email)}" inputmode="email" autocomplete="email" placeholder="emily.johnson@example.com" required>
+          <input id="email" value="${escapeHtml(state.email)}" inputmode="email" autocomplete="email" required>
         </label>
         <label class="span-full address-field">
           <span class="field-label">Project Address</span>
@@ -295,11 +295,11 @@ function fenceStep() {
       <div class="quote-input-grid">
         <label>
           <span class="field-label">Linear Feet Needed</span>
-          <input id="linearFeet" type="text" value="${escapeHtml(state.linearFeet)}" inputmode="numeric" autocomplete="off" placeholder="120">
+          <input id="linearFeet" type="text" value="${escapeHtml(state.linearFeet)}" inputmode="numeric" autocomplete="off">
         </label>
         <label>
           <span class="field-label">Number of Gates</span>
-          <input id="gates" type="number" min="0" step="1" value="${quote.gates}" inputmode="numeric" placeholder="1">
+          <input id="gates" type="number" min="0" step="1" value="${quote.gates}" inputmode="numeric">
         </label>
         <div class="toggle-row">
           <span>Existing fence removal
