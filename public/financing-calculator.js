@@ -42,7 +42,7 @@ const PRICES = {
 const REMOVAL_PRICE_PER_FOOT = 6;
 const GATE_PRICE = 800;
 const PAYMENT_COUNT = 12;
-const STORAGE_KEY = "bluebird_finance_quote_v3";
+const STORAGE_KEY = "bluebird_finance_quote_v4";
 const PRICING_STEP_COUNT = 3;
 
 const state = {
@@ -247,23 +247,23 @@ function contactStep() {
       <div class="field-grid">
         <label>
           <span class="field-label">First Name</span>
-          <input id="firstName" value="${escapeHtml(state.firstName)}" autocomplete="given-name" placeholder="Del" required>
+          <input id="firstName" value="${escapeHtml(state.firstName)}" autocomplete="given-name" placeholder="Emily" required>
         </label>
         <label>
           <span class="field-label">Last Name</span>
-          <input id="lastName" value="${escapeHtml(state.lastName)}" autocomplete="family-name" placeholder="Silva" required>
+          <input id="lastName" value="${escapeHtml(state.lastName)}" autocomplete="family-name" placeholder="Johnson" required>
         </label>
         <label>
           <span class="field-label">Phone Number</span>
-          <input id="phone" value="${escapeHtml(formatUSPhone(state.phone))}" inputmode="tel" autocomplete="tel" placeholder="(781) 725-2193" required>
+          <input id="phone" value="${escapeHtml(formatUSPhone(state.phone))}" inputmode="tel" autocomplete="tel" placeholder="(617) 555-0142" required>
         </label>
         <label>
           <span class="field-label">Email Address</span>
-          <input id="email" value="${escapeHtml(state.email)}" inputmode="email" autocomplete="email" placeholder="you@example.com" required>
+          <input id="email" value="${escapeHtml(state.email)}" inputmode="email" autocomplete="email" placeholder="emily.johnson@example.com" required>
         </label>
         <label class="span-full address-field">
           <span class="field-label">Project Address</span>
-          <input id="projectAddress" value="${escapeHtml(state.projectAddress)}" autocomplete="off" placeholder="123 Main St, Boston, MA" required>
+          <input id="projectAddress" value="${escapeHtml(state.projectAddress)}" autocomplete="off" placeholder="123 Main Street, Boston, MA 02110" required>
           <div class="autocomplete-menu hidden" id="addressSuggestions" role="listbox" aria-label="Address suggestions"></div>
           <small>Start typing and choose the matching U.S. address.</small>
         </label>
@@ -275,11 +275,10 @@ function contactStep() {
 
 function fenceStep() {
   const quote = getQuote();
-  const firstName = getFirstName();
 
   return `
     <div class="form-step">
-      <h2>${firstName ? `${escapeHtml(firstName)}, build your fence estimate` : "Build your fence estimate"}</h2>
+      <h2>Let's build your fence estimate</h2>
       <p>Choose the closest fence style, enter the approximate linear feet and add gates or old fence removal if needed. We will show the estimated payment on the next step.</p>
       <div class="option-grid">
         ${Object.entries(PRICES).map(([key, fence]) => `
@@ -296,11 +295,11 @@ function fenceStep() {
       <div class="quote-input-grid">
         <label>
           <span class="field-label">Linear Feet Needed</span>
-          <input id="linearFeet" type="text" value="${escapeHtml(state.linearFeet)}" inputmode="numeric" autocomplete="off" placeholder="100">
+          <input id="linearFeet" type="text" value="${escapeHtml(state.linearFeet)}" inputmode="numeric" autocomplete="off" placeholder="120">
         </label>
         <label>
           <span class="field-label">Number of Gates</span>
-          <input id="gates" type="number" min="0" step="1" value="${quote.gates}" inputmode="numeric">
+          <input id="gates" type="number" min="0" step="1" value="${quote.gates}" inputmode="numeric" placeholder="1">
         </label>
         <div class="toggle-row">
           <span>Existing fence removal

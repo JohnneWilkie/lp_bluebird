@@ -3,6 +3,7 @@
 :root {
   --navy: #071d3a;
   --blue: #1463d8;
+  --green: #1f9d49;
   --sky: #eaf4ff;
   --ink: #132238;
   --muted: #5f6f83;
@@ -1476,8 +1477,8 @@ details p { color: var(--muted); line-height: 1.55; }
   background: #fff;
 }
 .campaign-august-special .financing-calculator-section .option[aria-pressed="true"] b {
-  border-color: var(--green);
-  background: var(--green);
+  border-color: var(--green, #1f9d49);
+  background: var(--green, #1f9d49);
 }
 .campaign-august-special .financing-calculator-section .option[aria-pressed="true"] b::before {
   content: "";
@@ -1582,7 +1583,7 @@ details p { color: var(--muted); line-height: 1.55; }
   transition: transform .2s ease;
 }
 .campaign-august-special .financing-calculator-section .switch input:checked + i {
-  background: var(--green);
+  background: var(--green, #1f9d49);
 }
 .campaign-august-special .financing-calculator-section .switch input:checked + i::after {
   transform: translateX(24px);
@@ -1643,11 +1644,19 @@ details p { color: var(--muted); line-height: 1.55; }
 }
 .campaign-august-special .financing-calculator-section .btn-finance {
   color: #fff;
-  background: var(--green);
+  background: var(--green, #1f9d49);
   box-shadow: 0 12px 26px rgba(31, 157, 73, .28);
 }
 .campaign-august-special .financing-calculator-section .btn-finance:hover {
   background: #19833d;
+}
+.campaign-august-special .financing-calculator-section .btn-finance:focus-visible {
+  outline: 3px solid rgba(31, 157, 73, .28);
+  outline-offset: 3px;
+}
+.campaign-august-special .financing-calculator-section .btn-finance:disabled {
+  cursor: wait;
+  opacity: .72;
 }
 @media (min-width: 720px) {
   .campaign-august-special .financing-calculator-section .quote-input-grid {
