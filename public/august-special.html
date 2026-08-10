@@ -10,7 +10,9 @@
     <script defer src="/global-data.js?v=3"></script>
     <script defer src="/global-shell.js?v=5"></script>
     <script defer src="/meta-tracking.js?v=4"></script>
-    <script defer src="/app.js?v=13"></script>
+    <script>window.BLUEBIRD_USE_FINANCING_CALCULATOR = true;</script>
+    <script defer src="/app.js?v=14"></script>
+    <script defer src="/financing-calculator.js?v=1"></script>
     <link
   	rel="stylesheet"
  	 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
@@ -154,26 +156,28 @@
         </div>
       </section>
 
-      <section class="quote-section" id="quote-form">
+      <section class="quote-section financing-calculator-section" id="quote-form" aria-labelledby="quoteTitle">
         <div class="quote-header-band">
-          <p>Start your August Special request online now.</p>
-          <span>We’re Online</span>
+          <p>Instant Online Fence Quote</p>
+          <span>0% APR Available</span>
         </div>
         <div class="quote-shell">
-          <div class="quote-visual">
+          <aside class="quote-visual" aria-label="BlueBird Fence financing offer">
             <img id="formImage" src="/assets/hero-fence.jpg" alt="Installed residential privacy fence">
-            <div>
-              <p class="eyebrow">August Special request</p>
-              <h2>Ask About 0% APR Financing</h2>
-              <p>Share a few project details and our team will follow up about your fence and available financing options.</p>
+            <div class="quote-visual-copy">
+              <img class="brand-logo" src="/assets/bluebird-logo.png" alt="BlueBird Fence">
+              <p class="eyebrow">Fast online estimate</p>
+              <h2 id="quoteTitle">Build Your Fence. See Your Payment.</h2>
+              <p>Get your fence estimate in minutes and preview your monthly payment with 0% APR financing before you apply.</p>
             </div>
-          </div>
+          </aside>
           <form class="quote-card" id="quoteForm" novalidate>
-            <div class="progress">
-              <span id="progressText">Step 1 of 6</span>
+            <div class="progress" aria-label="Quote progress">
+              <span id="progressText">Step 1 of 3</span>
               <div><i id="progressBar"></i></div>
             </div>
             <div id="formSteps"></div>
+            <input type="hidden" name="quote_summary" id="quoteSummary">
             <input class="hp" type="text" name="website" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">
           </form>
         </div>

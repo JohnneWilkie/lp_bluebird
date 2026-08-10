@@ -26,6 +26,7 @@ loadEnvFile(path.join(__dirname, ".env"));
 
 const PORT = Number(process.env.PORT || 8091);
 const WEBHOOK_URL = String(process.env.N8N_BLUEBIRD_QUOTE_WEBHOOK_URL || "").trim();
+const FINANCING_WEBHOOK_URL = String(process.env.N8N_BLUEBIRD_FINANCING_WEBHOOK_URL || "https://n8n.mapadotriunfo.com.br/webhook/lp-bluebird-financing").trim();
 const RECAPTCHA_SECRET = String(process.env.BLUEBIRD_RECAPTCHA_SECRET_KEY || process.env.RECAPTCHA_SECRET_KEY || "").trim();
 const META_PIXEL_ID = String(process.env.META_PIXEL_ID || "1285141176620318").trim();
 const META_CAPI_ACCESS_TOKEN = String(process.env.META_CAPI_ACCESS_TOKEN || "").trim();
@@ -97,6 +98,76 @@ const quoteSchema = z.object({
       code: "custom",
       path: ["city"],
       message: "City is required."
+    });
+  }
+  if (String(data.website || "").trim()) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["website"],
+      message: "Spam protection rejected this request."
+    });
+  }
+});
+
+const optionalTextOrNumber = z.union([z.string(), z.number()]).optional();
+
+const financingQuoteSchema = z.object({
+  stage: z.enum(["contact_capture", "quote_complete"]).optional(),
+  source: z.string().optional(),
+  leadType: z.string().optional(),
+  serviceArea: z.string().optional(),
+  firstName: z.string().trim().min(1),
+  lastName: z.string().optional(),
+  phone: z.string().trim().min(7),
+  email: z.string().trim().email(),
+  projectAddress: z.string().optional(),
+  fullAddress: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  stateCode: z.string().optional(),
+  zipCode: z.string().optional(),
+  zipCodeProject: z.string().optional(),
+  fenceType: z.string().optional(),
+  fenceName: z.string().optional(),
+  fenceShortName: z.string().optional(),
+  fenceStyle: z.string().optional(),
+  linearFeet: optionalTextOrNumber,
+  gates: optionalTextOrNumber,
+  hasRemoval: z.union([z.boolean(), z.string()]).optional(),
+  fencePricePerFoot: optionalTextOrNumber,
+  fenceTotal: optionalTextOrNumber,
+  removalTotal: optionalTextOrNumber,
+  gateTotal: optionalTextOrNumber,
+  estimatedTotal: optionalTextOrNumber,
+  monthlyEstimate: optionalTextOrNumber,
+  paymentCount: optionalTextOrNumber,
+  hasCustomQuote: z.union([z.boolean(), z.string()]).optional(),
+  quoteSummary: z.string().optional(),
+  mainGoal: z.string().optional(),
+  timeline: z.string().optional(),
+  pagePath: z.string().optional(),
+  landingPage: z.string().optional(),
+  utmSource: z.string().optional(),
+  utmMedium: z.string().optional(),
+  utmCampaign: z.string().optional(),
+  utmTerm: z.string().optional(),
+  utmContent: z.string().optional(),
+  gclid: z.string().optional(),
+  msclkid: z.string().optional(),
+  fbclid: z.string().optional(),
+  timestamp: z.string().optional(),
+  recaptchaToken: z.string().optional(),
+  metaEventId: z.string().optional(),
+  externalId: z.string().optional(),
+  fbp: z.string().optional(),
+  fbc: z.string().optional(),
+  website: z.string().optional()
+}).superRefine((data, ctx) => {
+  if (!String(data.projectAddress || data.fullAddress || "").trim()) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["projectAddress"],
+      message: "Project address is required."
     });
   }
   if (String(data.website || "").trim()) {
@@ -418,6 +489,67 @@ function normalizePayload(input) {
   };
 }
 
+function normalizeFinancingPayload(input) {
+  const stage = clean(input.stage) || "quote_complete";
+  const fullAddress = clean(input.fullAddress) || clean(input.projectAddress);
+  const stateCode = clean(input.state) || clean(input.stateCode);
+  const zipCode = clean(input.zipCodeProject) || clean(input.zipCode);
+  const fenceStyle = clean(input.fenceStyle) || clean(input.fenceName) || clean(input.fenceShortName);
+
+  return {
+    stage,
+    source: clean(input.source) || "BlueBird Fence Financing Calculator",
+    leadType: clean(input.leadType) || (stage === "contact_capture" ? "Partial Financing Calculator Contact" : "Financing Calculator Request"),
+    serviceArea: clean(input.serviceArea) || "Boston Metro & Southern New Hampshire",
+    zipCodeInitial: zipCode,
+    firstName: clean(input.firstName),
+    lastName: clean(input.lastName),
+    phone: normalizePhone(input.phone),
+    email: clean(input.email),
+    projectType: "Fence Financing",
+    fenceStyle,
+    fenceType: clean(input.fenceType),
+    fenceName: clean(input.fenceName),
+    fenceShortName: clean(input.fenceShortName),
+    mainGoal: clean(input.mainGoal) || "0% APR Financing",
+    city: clean(input.city),
+    zipCodeProject: zipCode,
+    fullAddress,
+    projectAddress: fullAddress,
+    state: stateCode,
+    stateCode,
+    country: "us",
+    timeline: clean(input.timeline),
+    linearFeet: clean(input.linearFeet),
+    gates: clean(input.gates),
+    hasRemoval: input.hasRemoval === true || clean(input.hasRemoval).toLowerCase() === "true",
+    fencePricePerFoot: clean(input.fencePricePerFoot),
+    fenceTotal: clean(input.fenceTotal),
+    removalTotal: clean(input.removalTotal),
+    gateTotal: clean(input.gateTotal),
+    estimatedTotal: clean(input.estimatedTotal),
+    monthlyEstimate: clean(input.monthlyEstimate),
+    paymentCount: clean(input.paymentCount) || "12",
+    hasCustomQuote: input.hasCustomQuote === true || clean(input.hasCustomQuote).toLowerCase() === "true",
+    quoteSummary: clean(input.quoteSummary),
+    pagePath: clean(input.pagePath) || "/august-special",
+    landingPage: clean(input.landingPage) || "August Special Financing Calculator",
+    utmSource: clean(input.utmSource),
+    utmMedium: clean(input.utmMedium),
+    utmCampaign: clean(input.utmCampaign),
+    utmTerm: clean(input.utmTerm),
+    utmContent: clean(input.utmContent),
+    gclid: clean(input.gclid),
+    msclkid: clean(input.msclkid),
+    fbclid: clean(input.fbclid),
+    timestamp: isoTimestamp(input.timestamp),
+    metaEventId: clean(input.metaEventId),
+    externalId: clean(input.externalId),
+    fbp: clean(input.fbp),
+    fbc: clean(input.fbc)
+  };
+}
+
 app.post("/api/meta-event", async (req, res) => {
   if (!req.is("application/json")) {
     return res.status(415).json({ ok: false });
@@ -504,6 +636,64 @@ app.post("/api/quote", rateLimit, async (req, res) => {
 
 app.all("/api/quote", (_req, res) => {
   res.status(405).json({ ok: false, message: "Unable to send quote request right now." });
+});
+
+app.post("/api/financing-quote", rateLimit, async (req, res) => {
+  if (!req.is("application/json")) {
+    return res.status(415).json({ ok: false, message: "Unable to send financing request right now." });
+  }
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    return res.status(400).json({ ok: false, message: "Unable to send financing request right now." });
+  }
+
+  const parsed = financingQuoteSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, message: "Unable to send financing request right now." });
+  }
+
+  if (!FINANCING_WEBHOOK_URL) {
+    console.error("[financing-api] Missing N8N_BLUEBIRD_FINANCING_WEBHOOK_URL");
+    return res.status(500).json({ ok: false, message: "Unable to send financing request right now." });
+  }
+
+  const stage = parsed.data.stage || "quote_complete";
+  if (stage === "contact_capture") {
+    const captchaOk = await verifyRecaptcha(parsed.data.recaptchaToken, clientIp(req));
+    if (!captchaOk) {
+      console.warn("[financing-api] contact_capture accepted without valid reCAPTCHA token");
+    }
+  }
+
+  const payload = normalizeFinancingPayload(parsed.data);
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const response = await fetch(FINANCING_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      console.error("[financing-api] n8n webhook error", response.status, response.statusText);
+      return res.status(502).json({ ok: false, message: "Unable to send financing request right now." });
+    }
+
+    const metaEventName = stage === "contact_capture" ? "Lead" : "LeadComplete";
+    await sendMetaCapiEvent(req, metaEventName, payload, payload.metaEventId);
+
+    return res.json({ ok: true, message: "Financing request sent successfully." });
+  } catch (error) {
+    console.error("[financing-api] Failed to send financing request", error);
+    return res.status(502).json({ ok: false, message: "Unable to send financing request right now." });
+  }
+});
+
+app.all("/api/financing-quote", (_req, res) => {
+  res.status(405).json({ ok: false, message: "Unable to send financing request right now." });
 });
 
 app.use("/api", (_req, res) => {

@@ -4,6 +4,7 @@ const STORAGE_KEY = "bluebird_quote_state_v4";
 const TRACKING_KEY = "bluebird_tracking";
 const PARTIAL_SENT_KEY = "bluebird_partial_sent";
 const FINAL_SENT_KEY = "bluebird_final_sent";
+const USE_FINANCING_CALCULATOR = Boolean(window.BLUEBIRD_USE_FINANCING_CALCULATOR);
 
 const imageMap = {
   "Vinyl Fence": "/assets/vinyl-fence.jpg",
@@ -206,6 +207,12 @@ function scrollQuote() {
 }
 
 function applyPreset(preset = {}, origin = "card") {
+  if (USE_FINANCING_CALCULATOR) {
+    track("service_preset_selected", { origin, ...preset });
+    track("quote_start", { origin });
+    scrollQuote();
+    return;
+  }
   Object.assign(state, preset, { finalStatus: "idle" });
   saveState();
   updateFormImage();
@@ -901,12 +908,14 @@ if (window.renderBlueBirdQuoteBridges) window.renderBlueBirdQuoteBridges();
 renderServiceCards("quickServiceCards", false);
 renderServiceCards("detailServiceCards", true);
 renderReviews();
-renderForm();
-updateFormImage();
+if (!USE_FINANCING_CALCULATOR) {
+  renderForm();
+  updateFormImage();
+}
 bindGlobalTracking();
 initAreaCards();
 initScrollButtons();
-initAbandonmentTracking();
+if (!USE_FINANCING_CALCULATOR) initAbandonmentTracking();
 initQuoteBridgeVisibility();
 initPhotoSlider();
 
