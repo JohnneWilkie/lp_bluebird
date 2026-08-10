@@ -1372,7 +1372,7 @@ details p { color: var(--muted); line-height: 1.55; }
   display: inline;
 }
 .campaign-august-special .financing-calculator-section .progress i {
-  width: 33.33%;
+  width: 25%;
 }
 .campaign-august-special .financing-calculator-section .quote-visual-copy {
   display: grid;

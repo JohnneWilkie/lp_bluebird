@@ -209,7 +209,7 @@
         ...payload,
         metaEventId: payload.metaEventId || eventId(eventName)
       });
-      if (eventName === "Lead" || eventName === "LeadComplete") rememberLeadData(enriched);
+      if (eventName === "Lead" || eventName === "LeadDetails" || eventName === "LeadComplete") rememberLeadData(enriched);
       return enriched;
     },
     trackLead(payload = {}) {
@@ -218,6 +218,13 @@
       applyAdvancedMatching(enriched);
       const id = payload.metaEventId || eventId("Lead");
       trackBrowser("Lead", leadPayload(enriched), id);
+    },
+    trackLeadDetails(payload = {}) {
+      const stored = rememberLeadData(payload);
+      const enriched = matchPayload({ ...stored, ...payload });
+      applyAdvancedMatching(enriched);
+      const id = payload.metaEventId || eventId("LeadDetails");
+      trackBrowser("LeadDetails", leadPayload(enriched), id, true);
     },
     trackLeadComplete(payload = {}) {
       const stored = rememberLeadData(payload);

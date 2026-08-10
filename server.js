@@ -112,9 +112,10 @@ const quoteSchema = z.object({
 const optionalTextOrNumber = z.union([z.string(), z.number()]).optional();
 
 const financingQuoteSchema = z.object({
-  stage: z.enum(["contact_capture", "quote_complete"]).optional(),
+  stage: z.enum(["contact_capture", "details_capture", "quote_complete"]).optional(),
   source: z.string().optional(),
   leadType: z.string().optional(),
+  leadSessionId: z.string().optional(),
   serviceArea: z.string().optional(),
   firstName: z.string().trim().min(1),
   lastName: z.string().optional(),
@@ -163,11 +164,26 @@ const financingQuoteSchema = z.object({
   fbc: z.string().optional(),
   website: z.string().optional()
 }).superRefine((data, ctx) => {
+  const stage = data.stage || "quote_complete";
   if (!String(data.projectAddress || data.fullAddress || "").trim()) {
     ctx.addIssue({
       code: "custom",
       path: ["projectAddress"],
       message: "Project address is required."
+    });
+  }
+  if (stage !== "contact_capture" && !String(data.fenceStyle || data.fenceName || data.fenceShortName || "").trim()) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["fenceStyle"],
+      message: "Fence style is required."
+    });
+  }
+  if (stage !== "contact_capture" && Number(data.linearFeet || 0) <= 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["linearFeet"],
+      message: "Linear feet is required."
     });
   }
   if (String(data.website || "").trim()) {
@@ -392,6 +408,12 @@ async function sendMetaCapiEvent(req, eventName, payload = {}, eventId = "") {
       service_area: clean(payload.serviceArea),
       project_type: clean(payload.projectType),
       fence_style: clean(payload.fenceStyle),
+      linear_feet: clean(payload.linearFeet),
+      gates: clean(payload.gates),
+      has_removal: typeof payload.hasRemoval === "boolean" ? payload.hasRemoval : clean(payload.hasRemoval),
+      estimated_total: clean(payload.estimatedTotal),
+      monthly_estimate: clean(payload.monthlyEstimate),
+      lead_session_id: clean(payload.leadSessionId),
       city: clean(payload.city),
       state: clean(payload.state),
       country: clean(payload.country) || "us",
@@ -399,7 +421,9 @@ async function sendMetaCapiEvent(req, eventName, payload = {}, eventId = "") {
     }
   };
   Object.keys(event.custom_data).forEach((key) => {
-    if (!event.custom_data[key]) delete event.custom_data[key];
+    if (event.custom_data[key] === undefined || event.custom_data[key] === null || event.custom_data[key] === "") {
+      delete event.custom_data[key];
+    }
   });
 
   const body = { data: [event] };
@@ -491,27 +515,34 @@ function normalizePayload(input) {
 
 function normalizeFinancingPayload(input) {
   const stage = clean(input.stage) || "quote_complete";
+  const hasProjectDetails = stage === "details_capture" || stage === "quote_complete";
   const fullAddress = clean(input.fullAddress) || clean(input.projectAddress);
   const stateCode = clean(input.state) || clean(input.stateCode);
   const zipCode = clean(input.zipCodeProject) || clean(input.zipCode);
   const fenceStyle = clean(input.fenceStyle) || clean(input.fenceName) || clean(input.fenceShortName);
+  const leadType = stage === "contact_capture"
+    ? "Partial Financing Calculator Contact"
+    : stage === "details_capture"
+      ? "Financing Calculator Project Details"
+      : "Financing Calculator Request";
 
   return {
     stage,
     source: clean(input.source) || "BlueBird Fence Financing Calculator",
-    leadType: clean(input.leadType) || (stage === "contact_capture" ? "Partial Financing Calculator Contact" : "Financing Calculator Request"),
-    serviceArea: clean(input.serviceArea) || "Boston Metro & Southern New Hampshire",
+    leadType: clean(input.leadType) || leadType,
+    leadSessionId: clean(input.leadSessionId) || clean(input.externalId),
+    serviceArea: hasProjectDetails ? clean(input.serviceArea) || "Boston Metro & Southern New Hampshire" : undefined,
     zipCodeInitial: zipCode,
     firstName: clean(input.firstName),
     lastName: clean(input.lastName),
     phone: normalizePhone(input.phone),
     email: clean(input.email),
-    projectType: "Fence Financing",
-    fenceStyle,
-    fenceType: clean(input.fenceType),
-    fenceName: clean(input.fenceName),
-    fenceShortName: clean(input.fenceShortName),
-    mainGoal: clean(input.mainGoal) || "0% APR Financing",
+    projectType: hasProjectDetails ? "Fence Financing" : undefined,
+    fenceStyle: hasProjectDetails ? fenceStyle : undefined,
+    fenceType: hasProjectDetails ? clean(input.fenceType) : undefined,
+    fenceName: hasProjectDetails ? clean(input.fenceName) : undefined,
+    fenceShortName: hasProjectDetails ? clean(input.fenceShortName) : undefined,
+    mainGoal: hasProjectDetails ? clean(input.mainGoal) || "0% APR Financing" : undefined,
     city: clean(input.city),
     zipCodeProject: zipCode,
     fullAddress,
@@ -520,18 +551,18 @@ function normalizeFinancingPayload(input) {
     stateCode,
     country: "us",
     timeline: clean(input.timeline),
-    linearFeet: clean(input.linearFeet),
-    gates: clean(input.gates),
-    hasRemoval: input.hasRemoval === true || clean(input.hasRemoval).toLowerCase() === "true",
-    fencePricePerFoot: clean(input.fencePricePerFoot),
-    fenceTotal: clean(input.fenceTotal),
-    removalTotal: clean(input.removalTotal),
-    gateTotal: clean(input.gateTotal),
-    estimatedTotal: clean(input.estimatedTotal),
-    monthlyEstimate: clean(input.monthlyEstimate),
-    paymentCount: clean(input.paymentCount) || "12",
-    hasCustomQuote: input.hasCustomQuote === true || clean(input.hasCustomQuote).toLowerCase() === "true",
-    quoteSummary: clean(input.quoteSummary),
+    linearFeet: hasProjectDetails ? clean(input.linearFeet) : undefined,
+    gates: hasProjectDetails ? clean(input.gates) : undefined,
+    hasRemoval: hasProjectDetails ? input.hasRemoval === true || clean(input.hasRemoval).toLowerCase() === "true" : undefined,
+    fencePricePerFoot: hasProjectDetails ? clean(input.fencePricePerFoot) : undefined,
+    fenceTotal: hasProjectDetails ? clean(input.fenceTotal) : undefined,
+    removalTotal: hasProjectDetails ? clean(input.removalTotal) : undefined,
+    gateTotal: hasProjectDetails ? clean(input.gateTotal) : undefined,
+    estimatedTotal: hasProjectDetails ? clean(input.estimatedTotal) : undefined,
+    monthlyEstimate: hasProjectDetails ? clean(input.monthlyEstimate) : undefined,
+    paymentCount: hasProjectDetails ? clean(input.paymentCount) || "12" : undefined,
+    hasCustomQuote: hasProjectDetails ? input.hasCustomQuote === true || clean(input.hasCustomQuote).toLowerCase() === "true" : undefined,
+    quoteSummary: hasProjectDetails ? clean(input.quoteSummary) : undefined,
     pagePath: clean(input.pagePath) || "/august-special",
     landingPage: clean(input.landingPage) || "August Special Financing Calculator",
     utmSource: clean(input.utmSource),
@@ -682,7 +713,11 @@ app.post("/api/financing-quote", rateLimit, async (req, res) => {
       return res.status(502).json({ ok: false, message: "Unable to send financing request right now." });
     }
 
-    const metaEventName = stage === "contact_capture" ? "Lead" : "LeadComplete";
+    const metaEventName = stage === "contact_capture"
+      ? "Lead"
+      : stage === "details_capture"
+        ? "LeadDetails"
+        : "LeadComplete";
     await sendMetaCapiEvent(req, metaEventName, payload, payload.metaEventId);
 
     return res.json({ ok: true, message: "Financing request sent successfully." });

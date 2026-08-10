@@ -3,7 +3,9 @@ const GEOAPIFY_API_KEY = "d5bb983df17a4e15aebf7c4906e6e005";
 const RECAPTCHA_SITE_KEY = "6LfkjNwsAAAAAILZSKi0z4qi0GSeUkGG-hkcZaPJ";
 const TRACKING_KEY = "bluebird_tracking";
 const PARTIAL_SENT_KEY = "bluebird_financing_partial_sent";
+const DETAILS_SENT_KEY = "bluebird_financing_details_sent";
 const FINAL_SENT_KEY = "bluebird_financing_final_sent";
+const LEAD_SESSION_KEY = "bluebird_financing_lead_session_id";
 
 const PRICES = {
   vinyl: {
@@ -42,8 +44,8 @@ const PRICES = {
 const REMOVAL_PRICE_PER_FOOT = 6;
 const GATE_PRICE = 800;
 const PAYMENT_COUNT = 12;
-const STORAGE_KEY = "bluebird_finance_quote_v4";
-const PRICING_STEP_COUNT = 3;
+const STORAGE_KEY = "bluebird_finance_quote_v5";
+const PRICING_STEP_COUNT = 4;
 
 const state = {
   step: 0,
@@ -55,8 +57,8 @@ const state = {
   city: "",
   stateCode: "",
   zipCode: "",
-  fenceType: "vinyl",
-  linearFeet: "100",
+  fenceType: "",
+  linearFeet: "",
   hasRemoval: false,
   gates: 0,
   website: ""
@@ -140,6 +142,18 @@ function getTracking() {
     sessionStorage.setItem(TRACKING_KEY, JSON.stringify(captured));
   } catch {}
   return captured;
+}
+
+function getLeadSessionId() {
+  try {
+    const existing = localStorage.getItem(LEAD_SESSION_KEY);
+    if (existing) return existing;
+    const id = `fin_${crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(16).slice(2)}`}`;
+    localStorage.setItem(LEAD_SESSION_KEY, id);
+    return id;
+  } catch {
+    return `fin_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
 }
 
 function getCaptchaToken(action = "contact_capture") {
@@ -274,12 +288,10 @@ function contactStep() {
 }
 
 function fenceStep() {
-  const quote = getQuote();
-
   return `
     <div class="form-step">
-      <h2>Let's build your fence estimate</h2>
-      <p>Choose the closest fence style, enter the approximate linear feet and add gates or old fence removal if needed. We will show the estimated payment on the next step.</p>
+      <h2>Choose your fence style</h2>
+      <p>Select the option that most closely matches the fence you are planning.</p>
       <div class="option-grid">
         ${Object.entries(PRICES).map(([key, fence]) => `
           <button class="option" type="button" data-fence-type="${key}" aria-pressed="${state.fenceType === key}">
@@ -292,6 +304,18 @@ function fenceStep() {
           </button>
         `).join("")}
       </div>
+      ${actions("Back", "Continue to Project Details")}
+    </div>
+  `;
+}
+
+function projectDetailsStep() {
+  const quote = getQuote();
+
+  return `
+    <div class="form-step">
+      <h2>Tell us about your fence project</h2>
+      <p>Enter the approximate linear feet and add any gates or existing fence removal.</p>
       <div class="quote-input-grid">
         <label>
           <span class="field-label">Linear Feet Needed</span>
@@ -420,11 +444,21 @@ function setQuoteSummary() {
 
 function buildPayload(stage, recaptchaToken = "") {
   const quote = getQuote();
+  const eventName = stage === "contact_capture"
+    ? "Lead"
+    : stage === "details_capture"
+      ? "LeadDetails"
+      : "LeadComplete";
+  const leadType = stage === "contact_capture"
+    ? "Partial Financing Calculator Contact"
+    : stage === "details_capture"
+      ? "Financing Calculator Project Details"
+      : "Financing Calculator Request";
   const payload = {
     stage,
     source: "BlueBird Fence Financing Calculator",
-    leadType: stage === "contact_capture" ? "Partial Financing Calculator Contact" : "Financing Calculator Request",
-    serviceArea: "Boston Metro & Southern New Hampshire",
+    leadType,
+    leadSessionId: getLeadSessionId(),
     firstName: formatName(state.firstName),
     lastName: formatName(state.lastName),
     phone: formatUSPhone(state.phone),
@@ -436,24 +470,6 @@ function buildPayload(stage, recaptchaToken = "") {
     stateCode: state.stateCode,
     zipCode: state.zipCode,
     zipCodeProject: state.zipCode,
-    projectType: "Fence Financing",
-    fenceType: state.fenceType,
-    fenceName: quote.fence.name,
-    fenceShortName: quote.fence.shortName,
-    fenceStyle: quote.fence.name,
-    linearFeet: quote.linearFeet,
-    gates: quote.gates,
-    hasRemoval: state.hasRemoval,
-    fencePricePerFoot: quote.fence.pricePerFoot || "",
-    fenceTotal: quote.fenceTotal,
-    removalTotal: quote.removalTotal,
-    gateTotal: quote.gateTotal,
-    estimatedTotal: quote.hasCustomQuote ? "" : quote.total,
-    monthlyEstimate: quote.hasCustomQuote ? "" : quote.monthly,
-    paymentCount: PAYMENT_COUNT,
-    hasCustomQuote: quote.hasCustomQuote,
-    quoteSummary: quoteSummary?.value || "",
-    mainGoal: "0% APR Financing",
     pagePath: window.location.pathname,
     landingPage: "August Special Financing Calculator",
     ...getTracking(),
@@ -462,8 +478,32 @@ function buildPayload(stage, recaptchaToken = "") {
     recaptchaToken
   };
 
+  if (stage !== "contact_capture") {
+    Object.assign(payload, {
+      serviceArea: "Boston Metro & Southern New Hampshire",
+      projectType: "Fence Financing",
+      fenceType: state.fenceType,
+      fenceName: quote.fence.name,
+      fenceShortName: quote.fence.shortName,
+      fenceStyle: quote.fence.name,
+      linearFeet: quote.linearFeet,
+      gates: quote.gates,
+      hasRemoval: state.hasRemoval,
+      fencePricePerFoot: quote.fence.pricePerFoot || "",
+      fenceTotal: quote.fenceTotal,
+      removalTotal: quote.removalTotal,
+      gateTotal: quote.gateTotal,
+      estimatedTotal: quote.hasCustomQuote ? "" : quote.total,
+      monthlyEstimate: quote.hasCustomQuote ? "" : quote.monthly,
+      paymentCount: PAYMENT_COUNT,
+      hasCustomQuote: quote.hasCustomQuote,
+      quoteSummary: quoteSummary?.value || "",
+      mainGoal: "0% APR Financing"
+    });
+  }
+
   return window.BlueBirdMeta?.enrichPayload
-    ? window.BlueBirdMeta.enrichPayload(payload, stage === "contact_capture" ? "Lead" : "LeadComplete")
+    ? window.BlueBirdMeta.enrichPayload(payload, eventName)
     : payload;
 }
 
@@ -471,12 +511,16 @@ async function sendFinancingLead(stage, silent = false) {
   syncInputs();
   setQuoteSummary();
   const recaptchaToken = stage === "contact_capture" ? await getCaptchaToken("contact_capture") : "";
-  const cacheKey = stage === "contact_capture" ? PARTIAL_SENT_KEY : FINAL_SENT_KEY;
+  const cacheKey = stage === "contact_capture"
+    ? PARTIAL_SENT_KEY
+    : stage === "details_capture"
+      ? DETAILS_SENT_KEY
+      : FINAL_SENT_KEY;
   const payload = buildPayload(stage, recaptchaToken);
   const fingerprint = JSON.stringify(payload);
   if (sessionStorage.getItem(cacheKey) === fingerprint) return true;
 
-  isSending = stage === "quote_complete";
+  isSending = stage !== "contact_capture";
   if (isSending) render();
 
   try {
@@ -492,6 +536,9 @@ async function sendFinancingLead(stage, silent = false) {
     if (stage === "contact_capture") {
       window.BlueBirdMeta?.trackLead(payload);
       if (!window.BlueBirdMeta) track("contact_capture_submit", { leadType: payload.leadType });
+    } else if (stage === "details_capture") {
+      window.BlueBirdMeta?.trackLeadDetails(payload);
+      if (!window.BlueBirdMeta) track("details_capture_submit", { leadType: payload.leadType, fenceStyle: payload.fenceStyle });
     } else {
       window.BlueBirdMeta?.trackLeadComplete(payload);
       if (!window.BlueBirdMeta) track("quote_submit", { leadType: payload.leadType, fenceStyle: payload.fenceStyle });
@@ -513,7 +560,7 @@ function updateVisual() {
 }
 
 function render(error = "") {
-  const steps = [contactStep, fenceStep, estimateStep, thanksStep];
+  const steps = [contactStep, fenceStep, projectDetailsStep, estimateStep, thanksStep];
   const currentStep = Math.min(state.step, steps.length - 1);
   if (currentStep >= PRICING_STEP_COUNT) {
     progressText.textContent = "Request received";
@@ -555,7 +602,7 @@ function bindEvents() {
 
   formSteps.querySelector("[data-back]")?.addEventListener("click", () => {
     syncInputs();
-    state.step = state.step === 2 ? 1 : Math.max(0, state.step - 1);
+    state.step = Math.max(0, state.step - 1);
     saveState();
     render();
   });
@@ -578,12 +625,25 @@ async function nextStep() {
     await sendFinancingLead("contact_capture", true);
   }
 
-  if (state.step === 1 && !getQuote().hasCustomQuote && getQuote().linearFeet <= 0) {
+  if (state.step === 1 && !state.fenceType) {
+    showError("Please choose a fence style.");
+    return;
+  }
+
+  if (state.step === 2 && getQuote().linearFeet <= 0) {
     showError("Please enter the number of linear feet needed.");
     return;
   }
 
   if (state.step === 2) {
+    const sent = await sendFinancingLead("details_capture", false);
+    if (!sent) {
+      showError("We could not save your project details right now. Please try again or call BlueBird Fence.");
+      return;
+    }
+  }
+
+  if (state.step === 3) {
     const sent = await sendFinancingLead("quote_complete", false);
     if (!sent) {
       showError("We could not send your financing request right now. Please try again or call BlueBird Fence.");
@@ -591,9 +651,9 @@ async function nextStep() {
     }
   }
 
-  if (state.step >= 3) return;
+  if (state.step >= 4) return;
 
-  state.step = Math.min(3, state.step + 1);
+  state.step = Math.min(4, state.step + 1);
   saveState();
   render();
 }
