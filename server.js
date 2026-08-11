@@ -713,12 +713,14 @@ app.post("/api/financing-quote", rateLimit, async (req, res) => {
       return res.status(502).json({ ok: false, message: "Unable to send financing request right now." });
     }
 
-    const metaEventName = stage === "contact_capture"
-      ? "Lead"
-      : stage === "details_capture"
-        ? "LeadDetails"
-        : "LeadComplete";
-    await sendMetaCapiEvent(req, metaEventName, payload, payload.metaEventId);
+    if (stage === "details_capture") {
+      await sendMetaCapiEvent(req, "LeadDetails", payload, payload.metaEventId);
+    } else if (stage === "quote_complete") {
+      await Promise.all([
+        sendMetaCapiEvent(req, "Lead", payload, payload.metaEventId),
+        sendMetaCapiEvent(req, "LeadComplete", payload, payload.metaEventId)
+      ]);
+    }
 
     return res.json({ ok: true, message: "Financing request sent successfully." });
   } catch (error) {

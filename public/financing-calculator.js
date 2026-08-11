@@ -534,12 +534,12 @@ async function sendFinancingLead(stage, silent = false) {
     sessionStorage.setItem(cacheKey, fingerprint);
 
     if (stage === "contact_capture") {
-      window.BlueBirdMeta?.trackLead(payload);
-      if (!window.BlueBirdMeta) track("contact_capture_submit", { leadType: payload.leadType });
+      track("contact_capture_submit", { leadType: payload.leadType });
     } else if (stage === "details_capture") {
       window.BlueBirdMeta?.trackLeadDetails(payload);
       if (!window.BlueBirdMeta) track("details_capture_submit", { leadType: payload.leadType, fenceStyle: payload.fenceStyle });
     } else {
+      window.BlueBirdMeta?.trackLead(payload);
       window.BlueBirdMeta?.trackLeadComplete(payload);
       if (!window.BlueBirdMeta) track("quote_submit", { leadType: payload.leadType, fenceStyle: payload.fenceStyle });
     }
