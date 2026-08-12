@@ -89,6 +89,7 @@ function loadState() {
     }
     delete stored.step;
     Object.assign(state, stored);
+    if (!String(state.linearFeet || "").trim()) state.linearFeet = "100";
     state.step = 0;
   } catch {
     localStorage.removeItem(STORAGE_KEY);
