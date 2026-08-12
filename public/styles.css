@@ -736,6 +736,24 @@ select {
 }
 select:focus { outline: 3px solid rgba(20,99,216,.16); border-color: var(--blue); }
 input:focus { outline: 3px solid rgba(20,99,216,.16); border-color: var(--blue); }
+.input-unit {
+  position: relative;
+  display: block;
+}
+.input-unit input {
+  padding-right: 48px;
+}
+.input-unit > span {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
 .email-note { margin: -5px 0 0; color: var(--muted); font-size: 13px; }
 .captcha-wrap { overflow-x: auto; padding: 2px 0; }
 .form-actions { display: flex; gap: 10px; margin-top: 18px; }

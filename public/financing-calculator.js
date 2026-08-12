@@ -58,7 +58,7 @@ const state = {
   stateCode: "",
   zipCode: "",
   fenceType: "",
-  linearFeet: "",
+  linearFeet: "100",
   hasRemoval: false,
   gates: 0,
   website: ""
@@ -319,7 +319,10 @@ function projectDetailsStep() {
       <div class="quote-input-grid">
         <label>
           <span class="field-label">Linear Feet Needed</span>
-          <input id="linearFeet" type="text" value="${escapeHtml(state.linearFeet)}" inputmode="numeric" autocomplete="off">
+          <span class="input-unit">
+            <input id="linearFeet" type="text" value="${escapeHtml(state.linearFeet)}" inputmode="numeric" autocomplete="off" aria-describedby="linearFeetUnit">
+            <span id="linearFeetUnit" aria-hidden="true">ft</span>
+          </span>
         </label>
         <label>
           <span class="field-label">Number of Gates</span>
