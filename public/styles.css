@@ -1265,6 +1265,79 @@ details p { color: var(--muted); line-height: 1.55; }
   }
   .sticky-desktop a, .sticky-desktop button { padding: 0 16px; }
 }
+
+/* August campaign CRO layout */
+.campaign-august-special .site-header .nav-links,
+.campaign-august-special .site-header .mobile-menu-toggle {
+  display: none;
+}
+.campaign-august-special .august-special-hero {
+  min-height: 620px;
+  padding-top: 54px;
+  padding-bottom: 42px;
+}
+.campaign-august-special .august-special-hero .hero-copy {
+  max-width: 700px;
+}
+.campaign-august-special .august-special-hero h1 {
+  max-width: 680px;
+  font-size: clamp(40px, 5.4vw, 68px);
+  line-height: 1.04;
+}
+.campaign-august-special .hero-subtitle {
+  max-width: 620px;
+  margin: 16px 0 22px;
+  font-size: clamp(18px, 2.2vw, 23px);
+  font-weight: 700;
+  line-height: 1.4;
+}
+.campaign-august-special .hero-proof-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  max-width: 620px;
+  margin-bottom: 18px;
+}
+.campaign-august-special .hero-proof-row .august-brand-proof {
+  margin: 0;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+.campaign-august-special .credential-card {
+  min-height: 132px;
+}
+.campaign-august-special .trust-reviews .center-action {
+  display: none;
+}
+.campaign-august-special .campaign-terms {
+  padding: 14px clamp(18px, 4vw, 56px);
+  color: #52606f;
+  background: #f7fbff;
+  text-align: center;
+}
+.campaign-august-special .campaign-terms p {
+  max-width: 980px;
+  margin: 0 auto;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .campaign-august-special .august-special-hero {
+    min-height: auto;
+    padding-top: 26px;
+    padding-bottom: 30px;
+  }
+  .campaign-august-special .august-special-hero h1 {
+    font-size: 39px;
+  }
+  .campaign-august-special .hero-proof-row {
+    grid-template-columns: 1fr;
+  }
+  .campaign-august-special #ls-chat-container {
+    display: none !important;
+  }
+}
 @keyframes onlinePulse {
   0% { box-shadow: 0 0 0 0 rgba(215, 255, 229, .85); }
   70% { box-shadow: 0 0 0 9px rgba(215, 255, 229, 0); }
@@ -1688,5 +1761,34 @@ details p { color: var(--muted); line-height: 1.55; }
   }
   .campaign-august-special .financing-calculator-section .quote-card {
     min-height: 660px;
+  }
+}
+
+.campaign-august-special .financing-calculator-section {
+  min-height: auto;
+  padding-top: 34px;
+  padding-bottom: 42px;
+}
+.campaign-august-special .financing-calculator-section .quote-header-band {
+  margin-bottom: 14px;
+}
+.campaign-august-special .financing-calculator-section .quote-card {
+  border: 1px solid rgba(255, 255, 255, .38);
+  box-shadow: 0 24px 54px rgba(2, 20, 44, .26);
+}
+
+@media (min-width: 980px) {
+  .campaign-august-special .financing-calculator-section .quote-visual > img,
+  .campaign-august-special .financing-calculator-section .quote-card {
+    min-height: 620px;
+  }
+}
+
+@media (max-width: 760px) {
+  .campaign-august-special .financing-calculator-section {
+    padding: 26px 16px 32px;
+  }
+  .campaign-august-special .financing-calculator-section .quote-card {
+    padding: 18px;
   }
 }

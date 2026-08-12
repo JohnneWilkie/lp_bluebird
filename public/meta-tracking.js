@@ -4,26 +4,6 @@
   const VISITOR_ID_KEY = "bluebird_meta_external_id";
   const LEAD_DATA_KEY = "bluebird_meta_lead_data";
 
-  window._fbq = window._fbq || [];
-  if (!window.fbq) {
-    const fbq = window.fbq = function () {
-      fbq.callMethod ? fbq.callMethod.apply(fbq, arguments) : fbq.queue.push(arguments);
-    };
-    if (!window._fbq) window._fbq = fbq;
-    fbq.push = fbq;
-    fbq.loaded = true;
-    fbq.version = "2.0";
-    fbq.queue = [];
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = "https://connect.facebook.net/en_US/fbevents.js";
-    const first = document.getElementsByTagName("script")[0];
-    first.parentNode.insertBefore(script, first);
-  }
-
-  fbq("init", PIXEL_ID);
-  fbq("track", "PageView");
-
   function cookie(name) {
     const value = document.cookie.split("; ").find((row) => row.startsWith(`${name}=`))?.split("=")[1] || "";
     return value ? decodeURIComponent(value) : "";
@@ -149,7 +129,11 @@
 
   function trackBrowser(eventName, params = {}, id, custom = false) {
     const method = custom ? "trackCustom" : "track";
-    fbq(method, eventName, params, { eventID: id });
+    const send = () => {
+      if (typeof window.fbq === "function") window.fbq(method, eventName, params, { eventID: id });
+    };
+    if (typeof window.fbq === "function") send();
+    else setTimeout(send, 1500);
   }
 
   function advancedMatchData(payload = {}) {
@@ -167,8 +151,7 @@
   }
 
   function applyAdvancedMatching(payload = {}) {
-    const data = advancedMatchData(payload);
-    if (Object.keys(data).length) fbq("init", PIXEL_ID, data);
+    return advancedMatchData(payload);
   }
 
   function trackViewContent() {

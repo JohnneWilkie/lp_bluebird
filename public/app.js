@@ -224,6 +224,7 @@ function applyPreset(preset = {}, origin = "card") {
 
 function renderServiceCards(targetId, detailed = false) {
   const container = document.getElementById(targetId);
+  if (!container) return;
   container.innerHTML = services.map((service) => `
     <article class="${detailed ? "detail-card" : "service-card"}">
       ${detailed ? "" : `<img src="${service.image}" alt="${service.title} project by BlueBird Fence" loading="lazy" width="600" height="360">`}
