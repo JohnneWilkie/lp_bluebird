@@ -3,6 +3,54 @@
   const EVENT_PREFIX = "bbf";
   const VISITOR_ID_KEY = "bluebird_meta_external_id";
   const LEAD_DATA_KEY = "bluebird_meta_lead_data";
+  const ATTRIBUTION_KEY = "bluebird_attribution";
+  const config = window.BLUEBIRD_TRACKING_CONFIG || {};
+
+  window._fbq = window._fbq || [];
+  if (!window.fbq) {
+    const fbq = window.fbq = function () {
+      fbq.callMethod ? fbq.callMethod.apply(fbq, arguments) : fbq.queue.push(arguments);
+    };
+    if (!window._fbq) window._fbq = fbq;
+    fbq.push = fbq;
+    fbq.loaded = true;
+    fbq.version = "2.0";
+    fbq.queue = [];
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = "https://connect.facebook.net/en_US/fbevents.js";
+    const first = document.getElementsByTagName("script")[0];
+    first.parentNode.insertBefore(script, first);
+  }
+
+  fbq("init", PIXEL_ID);
+  fbq("track", "PageView");
+
+  if (config.microsoftUetTagId && !window.UET) {
+    (function (w, d, t, r, u) {
+      let f;
+      let n;
+      let i;
+      w[u] = w[u] || [];
+      f = function () {
+        const options = { ti: config.microsoftUetTagId, enableAutoSpaTracking: true };
+        options.q = w[u];
+        w[u] = new UET(options);
+        w[u].push("pageLoad");
+      };
+      n = d.createElement(t);
+      n.src = r;
+      n.async = true;
+      n.onload = n.onreadystatechange = function () {
+        const state = this.readyState;
+        if (state && state !== "loaded" && state !== "complete") return;
+        f();
+        n.onload = n.onreadystatechange = null;
+      };
+      i = d.getElementsByTagName(t)[0];
+      i.parentNode.insertBefore(n, i);
+    })(window, document, "script", "https://bat.bing.com/bat.js", "uetq");
+  }
 
   function cookie(name) {
     const value = document.cookie.split("; ").find((row) => row.startsWith(`${name}=`))?.split("=")[1] || "";
@@ -11,6 +59,83 @@
 
   function setCookie(name, value, maxAge = 7776000) {
     document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+  }
+
+  function storedAttribution() {
+    try {
+      return JSON.parse(sessionStorage.getItem(ATTRIBUTION_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  function captureAttribution() {
+    const params = new URLSearchParams(window.location.search);
+    const current = storedAttribution();
+    const next = {
+      utmSource: params.get("utm_source") || current.utmSource || "",
+      utmMedium: params.get("utm_medium") || current.utmMedium || "",
+      utmCampaign: params.get("utm_campaign") || current.utmCampaign || "",
+      utmTerm: params.get("utm_term") || current.utmTerm || "",
+      utmContent: params.get("utm_content") || current.utmContent || "",
+      gclid: params.get("gclid") || current.gclid || "",
+      msclkid: params.get("msclkid") || current.msclkid || "",
+      fbclid: params.get("fbclid") || current.fbclid || ""
+    };
+    try {
+      sessionStorage.setItem(ATTRIBUTION_KEY, JSON.stringify(next));
+    } catch {}
+    return next;
+  }
+
+  function mergeFilled(...sources) {
+    const output = {};
+    sources.forEach((source) => {
+      Object.entries(source || {}).forEach(([key, value]) => {
+        const text = typeof value === "string" ? value.trim() : value;
+        if (text === undefined || text === null || text === "") {
+          if (!(key in output)) output[key] = "";
+          return;
+        }
+        output[key] = value;
+      });
+    });
+    return output;
+  }
+
+  function pushDataLayer(eventName, payload = {}) {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: eventName,
+      page_path: payload.pagePath || window.location.pathname,
+      service_area: payload.serviceArea || "",
+      project_type: payload.projectType || "",
+      fence_style: payload.fenceStyle || "",
+      city: payload.city || "",
+      state: inferState(payload),
+      utm_source: payload.utmSource || "",
+      utm_medium: payload.utmMedium || "",
+      utm_campaign: payload.utmCampaign || "",
+      utm_term: payload.utmTerm || "",
+      utm_content: payload.utmContent || "",
+      gclid: payload.gclid || "",
+      msclkid: payload.msclkid || "",
+      fbclid: payload.fbclid || "",
+      event_id: payload.metaEventId || ""
+    });
+    window.dispatchEvent(new CustomEvent("bluebird_tracking", {
+      detail: { event: eventName, ...payload }
+    }));
+  }
+
+  function sendUetEvent(eventName, payload = {}) {
+    if (!window.uetq) return;
+    window.uetq.push("event", eventName, {
+      event_category: "conversion",
+      event_label: payload.leadType || payload.contentName || eventName,
+      page_path: payload.pagePath || window.location.pathname,
+      msclkid: payload.msclkid || ""
+    });
   }
 
   function ensureExternalId() {
@@ -81,7 +206,7 @@
 
   function matchPayload(payload = {}) {
     const stored = storedLeadData();
-    const merged = { ...stored, ...payload };
+    const merged = mergeFilled(captureAttribution(), stored, payload);
     return {
       ...merged,
       state: inferState(merged),
@@ -129,11 +254,7 @@
 
   function trackBrowser(eventName, params = {}, id, custom = false) {
     const method = custom ? "trackCustom" : "track";
-    const send = () => {
-      if (typeof window.fbq === "function") window.fbq(method, eventName, params, { eventID: id });
-    };
-    if (typeof window.fbq === "function") send();
-    else setTimeout(send, 1500);
+    fbq(method, eventName, params, { eventID: id });
   }
 
   function advancedMatchData(payload = {}) {
@@ -151,7 +272,8 @@
   }
 
   function applyAdvancedMatching(payload = {}) {
-    return advancedMatchData(payload);
+    const data = advancedMatchData(payload);
+    if (Object.keys(data).length) fbq("init", PIXEL_ID, data);
   }
 
   function trackViewContent() {
@@ -164,7 +286,10 @@
 
   function trackCall(label = "Call Now") {
     const id = eventId("clique_chamada");
-    const payload = pagePayload({ contentName: label || "Phone Click" });
+    const payload = pagePayload({ contentName: label || "Phone Click", metaEventId: id });
+    pushDataLayer("clique_chamada", payload);
+    pushDataLayer("phone_call_click", payload);
+    sendUetEvent("phone_call_click", payload);
     trackBrowser("clique_chamada", {
       content_name: payload.contentName,
       page_path: payload.pagePath
@@ -192,7 +317,7 @@
         ...payload,
         metaEventId: payload.metaEventId || eventId(eventName)
       });
-      if (eventName === "Lead" || eventName === "LeadDetails" || eventName === "LeadComplete") rememberLeadData(enriched);
+      if (eventName === "Lead" || eventName === "LeadComplete") rememberLeadData(enriched);
       return enriched;
     },
     trackLead(payload = {}) {
@@ -200,20 +325,21 @@
       const enriched = matchPayload({ ...stored, ...payload });
       applyAdvancedMatching(enriched);
       const id = payload.metaEventId || eventId("Lead");
+      enriched.metaEventId = id;
+      pushDataLayer("contact_capture_submit", enriched);
+      pushDataLayer("generate_lead", enriched);
+      sendUetEvent("lead", enriched);
       trackBrowser("Lead", leadPayload(enriched), id);
-    },
-    trackLeadDetails(payload = {}) {
-      const stored = rememberLeadData(payload);
-      const enriched = matchPayload({ ...stored, ...payload });
-      applyAdvancedMatching(enriched);
-      const id = payload.metaEventId || eventId("LeadDetails");
-      trackBrowser("LeadDetails", leadPayload(enriched), id, true);
     },
     trackLeadComplete(payload = {}) {
       const stored = rememberLeadData(payload);
       const enriched = matchPayload({ ...stored, ...payload });
       applyAdvancedMatching(enriched);
       const id = payload.metaEventId || eventId("LeadComplete");
+      enriched.metaEventId = id;
+      pushDataLayer("quote_submit", enriched);
+      pushDataLayer("lead_complete", enriched);
+      sendUetEvent("lead_complete", enriched);
       trackBrowser("LeadComplete", leadPayload(enriched), id, true);
     },
     trackCall

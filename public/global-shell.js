@@ -3,10 +3,20 @@
   if (!data) return;
 
   function header(activePath) {
-    const navItems = data.nav.map((item) => {
+    const lpNav = [
+      { label: "Fence Options", href: "#fence-options" },
+      { label: "Reviews", href: "#reviews" },
+      { label: "Financing", href: "#financing" },
+      { label: "Call Now", href: `tel:${data.PHONE_RAW}`, attrs: "data-phone-link" }
+    ];
+    const navSource = activePath === "/" || activePath === "/index.html" ? lpNav : data.nav;
+    const navItems = navSource.map((item) => {
       const active = activePath === item.href ? "is-active" : "";
-      return `<a class="${active}" href="${item.href}">${item.label}</a>`;
+      return `<a class="${active}" href="${item.href}" ${item.attrs || ""}>${item.label}</a>`;
     }).join("");
+    const cta = activePath === "/" || activePath === "/index.html"
+      ? `<a class="btn btn-primary header-quote" href="#quote-form" data-scroll-quote data-track="quote_start">Get My Online Quote</a>`
+      : "";
     return `
       <header class="site-header">
         <a class="brand" href="/" aria-label="BlueBird Fence home">
@@ -16,6 +26,7 @@
           <i class="fa-solid fa-bars" aria-hidden="true"></i>
         </button>
         <nav class="nav-links" id="globalNav" aria-label="Main navigation">${navItems}</nav>
+        ${cta}
         <a class="btn btn-call header-call" href="tel:${data.PHONE_RAW}" data-phone-link>Call Now: ${data.PHONE_PRETTY}</a>
       </header>
     `;
@@ -47,13 +58,13 @@
       <section class="quote-bridge quote-bridge-${variant}${hidden}"${rootId}>
         <div class="quote-bridge-inner">
           <div class="quote-bridge-topline">
-            <span>Start in under 2 minutes</span>
+            <span>START IN UNDER 2 MINUTES</span>
             <span class="finance-pill"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Financing Available</span>
           </div>
-          <strong>Online Quote Available</strong>
-          <a class="btn btn-primary2 quote-bridge-cta" href="#quote-form" data-scroll-quote data-track="quote_start">Quote Online Now</a>
+          <strong>Your Online Fence Quote Starts Here</strong>
+          <a class="btn btn-primary2 quote-bridge-cta" href="#quote-form" data-scroll-quote data-track="quote_start">Start My Online Quote</a>
           <div class="quote-bridge-callrow">
-            <p>Want to speak with a fence specialist first?</p>
+            <p>Prefer to speak with a fence specialist?</p>
             <a class="btn btn-secondary" href="tel:${data.PHONE_RAW}" data-phone-link data-track="phone_click"><i class="fa-solid fa-phone" aria-hidden="true"></i> Call Now</a>
           </div>
         </div>
@@ -112,6 +123,10 @@
     formObserver.observe(form);
     window.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
+    window.addEventListener("bluebird_tracking", () => {
+      requestAnimationFrame(update);
+      setTimeout(update, 120);
+    });
     update();
   }
 

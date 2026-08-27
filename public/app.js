@@ -58,7 +58,7 @@ const services = [
     title: "Vinyl Fence",
     slug: "/vinyl-fence",
     text: "A durable, low-maintenance option that gives your property a clean, finished look while improving privacy and curb appeal. Great for homeowners who want long-term value with minimal upkeep.",
-    cta: "Price Vinyl Fence",
+    cta: "Start Vinyl Fence Quote",
     image: imageMap["Vinyl Fence"],
     quotePreset: { fenceStyle: "Vinyl Fence", projectType: "New Fence" },
     secondaryPageEnabled: true
@@ -67,7 +67,7 @@ const services = [
     title: "Wood Fence",
     slug: "/wood-fence",
     text: "A timeless fence style that brings warmth, privacy, and character to your yard. Ideal for families looking to define space, improve comfort, and elevate the natural look of the property.",
-    cta: "Price Wood Fence",
+    cta: "Start Wood Fence Quote",
     image: imageMap["Wood Fence"],
     quotePreset: { fenceStyle: "Wood Fence", projectType: "New Fence" },
     secondaryPageEnabled: true
@@ -76,7 +76,7 @@ const services = [
     title: "Chain Link Fence",
     slug: "/chain-link-fence",
     text: "A practical and budget-friendly solution for securing property lines, pets, and utility areas. Known for durability and function, with flexible options for residential and commercial use.",
-    cta: "Price Chain Link",
+    cta: "Start Chain-Link Fence Quote",
     image: imageMap["Chain Link Fence"],
     quotePreset: { fenceStyle: "Chain Link Fence", projectType: "New Fence" },
     secondaryPageEnabled: true
@@ -85,7 +85,7 @@ const services = [
     title: "Aluminum Fence",
     slug: "/aluminum-fence",
     text: "A sleek, premium-looking fence that adds security without blocking visibility. Perfect for front yards, pool enclosures, and properties that need both protection and style.",
-    cta: "Price Aluminum Fence",
+    cta: "Start Aluminum Fence Quote",
     image: imageMap["Aluminum Fence"],
     quotePreset: { fenceStyle: "Aluminum Fence", projectType: "New Fence" },
     secondaryPageEnabled: true
@@ -94,7 +94,7 @@ const services = [
     title: "Commercial Fence",
     slug: "/commercial-fence",
     text: "Built for businesses, multifamily properties, and high-traffic spaces that need reliable perimeter protection. Designed for security, access control, and long-term performance.",
-    cta: "Price Commercial Fence",
+    cta: "Start Commercial Fence Quote",
     image: imageMap["Commercial Fence"],
     quotePreset: { fenceStyle: "Commercial Fence", projectType: "Commercial Fence" },
     secondaryPageEnabled: false
@@ -171,7 +171,9 @@ function getTracking() {
     utmCampaign: params.get("utm_campaign") || existing.utmCampaign || "",
     utmTerm: params.get("utm_term") || existing.utmTerm || "",
     utmContent: params.get("utm_content") || existing.utmContent || "",
-    gclid: params.get("gclid") || existing.gclid || ""
+    gclid: params.get("gclid") || existing.gclid || "",
+    msclkid: params.get("msclkid") || existing.msclkid || "",
+    fbclid: params.get("fbclid") || existing.fbclid || ""
   };
   sessionStorage.setItem(TRACKING_KEY, JSON.stringify(captured));
   return captured;
@@ -225,7 +227,8 @@ function applyPreset(preset = {}, origin = "card") {
 function renderServiceCards(targetId, detailed = false) {
   const container = document.getElementById(targetId);
   if (!container) return;
-  container.innerHTML = services.map((service) => `
+  const visibleServices = services.filter((service) => !["Fence Repair", "Temporary / Rental Fence"].includes(service.title));
+  container.innerHTML = visibleServices.map((service) => `
     <article class="${detailed ? "detail-card" : "service-card"}">
       ${detailed ? "" : `<img src="${service.image}" alt="${service.title} project by BlueBird Fence" loading="lazy" width="600" height="360">`}
       <div class="${detailed ? "" : "service-body"}">
@@ -320,7 +323,11 @@ const staticReviews = [
 function renderReviews() {
   const container = document.getElementById("reviewsCarousel");
   if (!container) return;
-  container.innerHTML = staticReviews.map((review) => `
+  const reviewPriority = ["Barry Forde", "Will Mustoe", "John Ballantine Jr."];
+  const priorityReviews = reviewPriority
+    .map((name) => staticReviews.find((review) => review.name === name))
+    .filter(Boolean);
+  container.innerHTML = priorityReviews.map((review) => `
     <article class="google-review-card">
       <header class="google-review-head">
         <div class="google-avatar google-avatar-${review.tone}">${escapeHtml(review.initial)}</div>
@@ -734,11 +741,15 @@ async function sendLead(stage, silent) {
       state.finalStatus = "sent";
       saveState();
       window.BlueBirdMeta?.trackLeadComplete(payload);
-      track("quote_submit", { serviceArea: state.serviceArea, projectType: state.projectType, fenceStyle: state.fenceStyle });
+      if (!window.BlueBirdMeta) {
+        track("quote_submit", { serviceArea: state.serviceArea, projectType: state.projectType, fenceStyle: state.fenceStyle });
+      }
       renderForm();
     } else {
       window.BlueBirdMeta?.trackLead(payload);
-      track("contact_capture_submit", { serviceArea: state.serviceArea });
+      if (!window.BlueBirdMeta) {
+        track("contact_capture_submit", { serviceArea: state.serviceArea });
+      }
     }
     return true;
   } catch {
@@ -785,7 +796,9 @@ function initAreaCards() {
 function initScrollButtons() {
   document.querySelectorAll("[data-scroll-quote]").forEach((button) => {
     button.addEventListener("click", () => {
-      track("quote_start", { label: button.textContent.trim() });
+      if (!button.dataset.track || !button.dataset.trackingBound) {
+        track("quote_start", { label: button.textContent.trim() });
+      }
       scrollQuote();
     });
   });
